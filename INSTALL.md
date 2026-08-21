@@ -21,8 +21,10 @@ watch silently refuses to install - the most common mistake.
 
 ## Transfer it (Windows)
 
-1. On the watch, go to **Settings > System > USB Mode** and set **MTP**. The alternative
-   "Garmin" mode also works but prompts you on every connection.
+1. *(Optional, only if the menu exists.)* On the watch, go to **Settings > System > USB
+   Mode** and set **MTP**. If your watch has no **USB Mode** entry, don't worry - that
+   firmware is fixed to **MTP** already, so plugging in just works. The alternative
+   "Garmin" mode, where present, also works but prompts you on every connection.
 2. **Fully quit Garmin Express on the PC**, including the system-tray icon. If Express is
    running it holds the USB connection and the watch will not appear.
 3. Connect the watch by USB. On Windows it shows up in File Explorer as an MTP device -

@@ -21,22 +21,39 @@ $sdk = (Get-Content "$env:APPDATA\Garmin\ConnectIQ\current-sdk.cfg").Trim()
 $jar = Join-Path $sdk "bin\monkeybrains.jar"
 if (-not (Test-Path $jar)) { throw "Compiler not found at $jar" }
 
-# --- Find a working Java (the PATH one is broken on this machine) ---
-$javaCandidates = @(
-    "C:\Program Files\Java\jre1.8.0_341\bin\java.exe",
-    "C:\Program Files\Eclipse Adoptium\*\bin\java.exe",
-    "C:\Program Files\Microsoft\*\bin\java.exe",
-    "C:\Program Files\Java\*\bin\java.exe"
-)
-$java = $null
-foreach ($pattern in $javaCandidates) {
-    $found = Get-ChildItem $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) {
-        & $found.FullName -version *> $null
-        if ($LASTEXITCODE -eq 0) { $java = $found.FullName; break }
+# --- Find a working Java ---
+# Preference: $env:CIQ_JAVA, then `java` on PATH (e.g. your Temurin install),
+# then any JDK/JRE under Program Files. The broken Oracle "javapath" stub is
+# auto-rejected because its version probe exits with a crash code. The probe
+# output is fully suppressed so it does not print red stderr noise.
+function Get-WorkingJava {
+    $candidates = @()
+    if ($env:CIQ_JAVA) { $candidates += $env:CIQ_JAVA }
+    $onPath = (Get-Command java -ErrorAction SilentlyContinue).Source
+    if ($onPath) { $candidates += $onPath }
+    foreach ($glob in @(
+        "C:\Program Files\Eclipse Adoptium\*\bin\java.exe",
+        "C:\Program Files\Microsoft\jdk*\bin\java.exe",
+        "C:\Program Files\Java\jdk*\bin\java.exe",
+        "C:\Program Files\Java\jre*\bin\java.exe")) {
+        Get-ChildItem $glob -ErrorAction SilentlyContinue | ForEach-Object { $candidates += $_.FullName }
     }
+    foreach ($exe in $candidates) {
+        if (-not $exe -or -not (Test-Path $exe)) { continue }
+        $ok = $false
+        try {
+            $old = $ErrorActionPreference
+            $ErrorActionPreference = 'SilentlyContinue'
+            & $exe -version 2>&1 | Out-Null
+            $ok = ($LASTEXITCODE -eq 0)
+            $ErrorActionPreference = $old
+        } catch { $ok = $false }
+        if ($ok) { return $exe }
+    }
+    return $null
 }
-if ($null -eq $java) { throw "No working Java runtime found. Install a JDK (17+ recommended) and retry." }
+$java = Get-WorkingJava
+if ($null -eq $java) { throw "No working Java runtime found. Install Temurin (Adoptium) JDK 21 and retry." }
 Write-Host "Using Java: $java"
 Write-Host "Using SDK:  $sdk"
 
@@ -45,14 +62,22 @@ if (-not (Test-Path $key)) { throw "Missing developer_key.der. See HANDOFF.md to
 
 New-Item -ItemType Directory -Force -Path bin | Out-Null
 
-$mode = if ($Debug) { @() } else { @("-r") }
 $modeLabel = if ($Debug) { "debug" } else { "release" }
 
 foreach ($device in @("venu3", "venu3s")) {
     $out = "bin\MoonPhaseAstro-$device.prg"
     Write-Host "`nBuilding $device ($modeLabel) -> $out"
-    & $java -cp $jar com.garmin.monkeybrains.Monkeybrains `
-        -f monkey.jungle -o $out -y $key -d $device -w @mode 2>&1 |
+    # Build the argument list explicitly. Splatting a variable set from an `if`
+    # expression is unsafe here: a single-element array like @("-r") gets
+    # unwrapped to the scalar string "-r", and splatting a string expands it
+    # character-by-character ("-", "r"), so the compiler sees a stray source
+    # file and rejects -f.
+    $javaArgs = @(
+        "-cp", $jar, "com.garmin.monkeybrains.Monkeybrains",
+        "-f", "monkey.jungle", "-o", $out, "-y", $key, "-d", $device, "-w"
+    )
+    if (-not $Debug) { $javaArgs += "-r" }
+    & $java @javaArgs 2>&1 |
         Select-String -Pattern "BUILD|ERROR|WARNING"
     if (-not (Test-Path $out)) { throw "Build failed for $device" }
 }
