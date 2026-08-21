@@ -8,6 +8,10 @@ AMOLED-friendly dial with a rainbow second hand.
 ![Platform: Connect IQ](https://img.shields.io/badge/platform-Garmin%20Connect%20IQ-007cc3.svg)
 ![Devices: Venu 3 / Venu 3S](https://img.shields.io/badge/devices-Venu%203%20%2F%20Venu%203S-333.svg)
 
+<p align="center">
+  <img src="screenshots/1.png" alt="Moon Phase Astro watch face" width="360">
+</p>
+
 ## Features
 
 - **Real moon phase** — a warm off-white moon subdial at 6 o'clock with actual
