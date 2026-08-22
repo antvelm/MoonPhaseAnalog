@@ -160,7 +160,7 @@
     <!-- Fire the rainbow wave at the top of every minute instead of on its
          schedule, so it can be tuned without waiting. Overrides
          EnableRainbowWave, WaveHour and WaveIntervalHours while it is on. -->
-    <property id="WaveTestMode" type="boolean">true</property>
+    <property id="WaveTestMode" type="boolean">false</property>
 
     <!-- Force an eclipse regardless of the date: 0 off, 1 lunar, 2 solar.
          Requires EclipseEffects to be on. Off, real eclipses show normally. -->
