@@ -38,7 +38,7 @@ module MoonDial {
     const LIMB_FLOOR = 0.42;    // brightness at the very limb, 1.0 = no darkening
 
     (:typecheck(false))
-    function draw(dc, mx, my, mr, awake, eclipse, weak) {
+    function draw(dc, mx, my, mr, awake, frac, eclipse, weak) {
         if (eclipse != null && !eclipse[:lunar]) {
             drawSolar(dc, mx, my, mr, eclipse, weak);
             return;
@@ -58,7 +58,6 @@ module MoonDial {
         dc.setPenWidth(1);
         dc.drawCircle(mx, my, mr);
 
-        var frac = MoonPhase.fraction();
         var p = 2.0 * Math.PI * frac;
         var cosP = Math.cos(p);
         var sinP = Math.sin(p);
@@ -219,7 +218,7 @@ module MoonDial {
     // location check could not confirm it.
     (:typecheck(false))
     function drawSolar(dc, mx, my, mr, eclipse, weak) {
-        var intensity = weak ? 0.45 : 1.0;
+        var intensity = weak ? 0.70 : 1.0;
 
         // Streamers first, so the ring sits on top of them.
         dc.setColor(Theme.dim(Theme.CORONA_DIM, intensity), Gfx.COLOR_TRANSPARENT);

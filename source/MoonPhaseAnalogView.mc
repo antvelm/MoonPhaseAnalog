@@ -174,6 +174,8 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
             Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
     }
 
+    // Glyph beside the number rather than above it, so the pair sits on one
+    // line at the same height as the "FRI 27" date on the other side.
     (:typecheck(false))
     function drawHeartRate(dc, awake) {
         var hr = Complications.heartRate();
@@ -182,22 +184,24 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         var text = (hr == null) ? "--" : hr.toString();
         var font = HR_FONT;
-        var textH = Gfx.getFontHeight(font);
+        var textW = dc.getTextWidthInPixels(text, font);
 
-        // Glyph above the number, sized to the number so the pair reads as one
-        // block. The stack is centred on the complication position.
         var hs = scaled(HR_ICON);
-        var stackH = hs * 2 + textH;
-        var hy = cy - stackH / 2 + hs;
-        var ty = cy + stackH / 2 - textH / 2;
+        var gap = scaled(4);
+        var iconW = hs * 1.92;
+        var total = iconW + gap + textW;
 
-        drawHeart(dc, cx, hy, hs, awake);
+        var left = cx - total / 2;
+        var hx = left + iconW / 2;
+        var tx = left + iconW + gap;
+
+        drawHeart(dc, hx, cy, hs, awake);
 
         dc.setColor(
-            RainbowWave.tint(awake ? Theme.READOUT : Theme.READOUT_DIM, cx, ty),
+            RainbowWave.tint(awake ? Theme.READOUT : Theme.READOUT_DIM, tx + textW / 2, cy),
             Gfx.COLOR_TRANSPARENT);
-        dc.drawText(cx, ty, font, text,
-            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(tx, cy, font, text,
+            Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
     }
 
     // Two lobes and a point, with a cusp notch between the lobes so it reads as
@@ -239,11 +243,17 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         if (eclipse != null && !eclipse[:lunar]) {
             // A solar eclipse is only visible along a narrow path the face
             // cannot know about, so the corona is drawn faint unless the
-            // location check is switched on and passes.
-            weak = (Settings.eclipseVisibility == Settings.ECLIPSE_ALWAYS);
+            // location check actually ran and passed. "Always" never checks,
+            // and a watch with no fix fails open: both are unconfirmed.
+            // A forced eclipse is a rendering test, so never dim that one.
+            weak = (Settings.debugEclipse == Settings.DEBUG_ECLIPSE_OFF)
+                && !SkyPosition.visibilityConfirmed();
         }
 
-        MoonDial.draw(dc, mx, my, mr, awake, eclipse, weak);
+        // The phase has to come off the same clock the eclipse did, or a debug
+        // time offset moves the eclipse while the disc keeps today's phase.
+        var frac = MoonPhase.fractionAt(astroTime(now));
+        MoonDial.draw(dc, mx, my, mr, awake, frac, eclipse, weak);
     }
 
     // The eclipse to render right now, or null. Cached inside MoonPhase, so

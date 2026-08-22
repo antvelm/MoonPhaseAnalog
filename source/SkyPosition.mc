@@ -23,6 +23,11 @@ module SkyPosition {
     const WRITE_MIN_SECONDS = 3600;
     const WRITE_MIN_DEGREES = 0.05;      // ~5 km
 
+    // Whether the last eclipseVisible call actually judged the eclipse against a
+    // position, as opposed to failing open. MoonDial dims the solar corona when
+    // nothing confirmed it.
+    var _confirmed = false;
+
     var _lastWriteEpoch = null;
     var _lastLat = null;
     var _lastLon = null;
@@ -125,6 +130,8 @@ module SkyPosition {
     // real eclipse just because the watch has not had a fix.
     (:typecheck(false))
     function eclipseVisible(eclipse, epochSeconds) {
+        _confirmed = false;
+
         if (Settings.eclipseVisibility == Settings.ECLIPSE_ALWAYS) {
             recordNotUsed();
             return true;
@@ -136,6 +143,7 @@ module SkyPosition {
             return true;
         }
         recordFix(pos[0], pos[1], epochSeconds);
+        _confirmed = true;
 
         var alt = sunAltitude(epochSeconds, pos[0], pos[1]);
         if (eclipse[:lunar]) {
@@ -146,6 +154,13 @@ module SkyPosition {
         // totality is far narrower than this test. MoonDial dims the corona to
         // signal that.
         return alt > HORIZON;
+    }
+
+    // True when the most recent eclipseVisible call reached the horizon test,
+    // i.e. the gate is switched on and a position was available. False when it
+    // failed open, which is the common case: the gate defaults to off.
+    function visibilityConfirmed() {
+        return _confirmed;
     }
 
     // --- Diagnostic readout (settings screen only, never the dial) ----------
