@@ -50,6 +50,29 @@
          while the watch is asleep or cannot rotate text, whatever this says. -->
     <property id="ShowSecondNumerals" type="boolean">true</property>
 
+    <!-- Colour of the hour and minute hands (Theme.handPreset).
+         0 White, 1 Cool white, 2 Lume green, 3 Ice blue, 4 Amber, 5 Orange,
+         6 Red, 7 Magenta.
+         8 Spectrum: no fixed colour - the hands ride the same hue as the
+         second hand, so the whole time display glows as one and turns through
+         the wheel once a minute.
+         The daily rainbow wave still washes over whatever is picked, and in
+         always-on mode the colour is dimmed rather than replaced by grey
+         (Hands.LOW_POWER_LEVEL). Does not touch the second hand, which is
+         always the spectrum needle. -->
+    <property id="HandColor" type="number">8</property>
+
+    <!-- Cut a hollow down the middle of the hour and minute hands, as a
+         percentage of the hand's width at its tip: 0 draws them solid, 50
+         leaves a border half the tip's width, 80 a hairline outline. The
+         border keeps that thickness all the way down the hand, so the cut-out
+         widens towards the centre as the hand does. Settings too thin to leave
+         a visible border (Hands.MIN_RIM / MIN_CORE) fall back to solid, which
+         is what the minute hand does first since it is the narrower of the
+         two. The cut-out is painted in the dial's black rather than being
+         see-through - Dc cannot clip. -->
+    <property id="HandHollow" type="number">50</property>
+
     <!-- What fills the dial behind the hands (Dial.drawBackground).
          0 Starfield: procedural stars, count set by StarDensity.
          1 Zodiac stars: the sign's principal stars only.

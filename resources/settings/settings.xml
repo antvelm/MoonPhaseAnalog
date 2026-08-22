@@ -21,6 +21,26 @@
         <settingConfig type="boolean" />
     </setting>
 
+    <setting propertyKey="@Properties.HandColor" title="@Strings.SetHandColor"
+             prompt="@Strings.SetHandColorPrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.HandWhite</listEntry>
+            <listEntry value="1">@Strings.HandCool</listEntry>
+            <listEntry value="2">@Strings.HandLume</listEntry>
+            <listEntry value="3">@Strings.HandIce</listEntry>
+            <listEntry value="4">@Strings.HandAmber</listEntry>
+            <listEntry value="5">@Strings.HandOrange</listEntry>
+            <listEntry value="6">@Strings.HandRed</listEntry>
+            <listEntry value="7">@Strings.HandMagenta</listEntry>
+            <listEntry value="8">@Strings.HandSpectrum</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.HandHollow" title="@Strings.SetHandHollow"
+             prompt="@Strings.SetHandHollowPrompt">
+        <settingConfig type="numeric" min="0" max="80" />
+    </setting>
+
     <setting propertyKey="@Properties.Background" title="@Strings.SetBackground"
              prompt="@Strings.SetBackgroundPrompt">
         <settingConfig type="list">

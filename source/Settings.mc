@@ -24,6 +24,11 @@ module Settings {
     const HOUR_MARK_LINES          = 1;
     const HOUR_MARK_LINES_CARDINAL = 2;
 
+    // --- Hand colour ---
+    // 0-7 are the fixed presets in Theme.handPreset; 8 has no fixed value and
+    // is resolved per frame against the second hand's hue.
+    const HAND_COLOR_SPECTRUM = 8;
+
     // --- Eclipse visibility gate ---
     const ECLIPSE_ALWAYS  = 0;
     const ECLIPSE_IF_HERE = 1;
@@ -48,6 +53,8 @@ module Settings {
     var hourNumeralsOuter;
     var hourMarkStyle;
     var showSecondNumerals;
+    var handColor;
+    var handHollow;
     var starDensity;
     var background;
     var zodiacSign;
@@ -77,6 +84,8 @@ module Settings {
         hourNumeralsOuter   = boolOr("HourNumeralsOuter", false);
         hourMarkStyle       = numberOr("HourMarkStyle", 0, 0, 2);
         showSecondNumerals  = boolOr("ShowSecondNumerals", true);
+        handColor           = numberOr("HandColor", HAND_COLOR_SPECTRUM, 0, 8);
+        handHollow          = numberOr("HandHollow", 0, 0, 80);
         starDensity         = numberOr("StarDensity", 2, 0, 3);
         background          = numberOr("Background", 0, 0, 2);
         zodiacSign          = numberOr("ZodiacSign", 0, 0, 12);

@@ -36,6 +36,21 @@
     <string id="ZodiacAquarius">Aquarius</string>
     <string id="ZodiacPisces">Pisces</string>
 
+    <string id="SetHandColor">Hand colour</string>
+    <string id="SetHandColorPrompt">Colour of the hour and minute hands. Spectrum gives them no fixed colour: they ride the same hue as the second hand, turning through the wheel once a minute. The second hand itself is always the spectrum needle.</string>
+    <string id="HandWhite">White</string>
+    <string id="HandCool">Cool white</string>
+    <string id="HandLume">Lume green</string>
+    <string id="HandIce">Ice blue</string>
+    <string id="HandAmber">Amber</string>
+    <string id="HandOrange">Orange</string>
+    <string id="HandRed">Red</string>
+    <string id="HandMagenta">Magenta</string>
+    <string id="HandSpectrum">Spectrum</string>
+
+    <string id="SetHandHollow">Hollow hands</string>
+    <string id="SetHandHollowPrompt">Cuts a hollow down the middle of the hour and minute hands, given as a percentage of the hand's width at the tip: 0 is solid, 50 leaves a clear border, 80 a hairline outline. The border keeps an even thickness, so the cut-out widens towards the centre. Too thin to show and the hand stays solid.</string>
+
     <string id="SetStarDensity">Star density</string>
     <string id="DensityOff">Off</string>
     <string id="DensitySparse">Sparse</string>

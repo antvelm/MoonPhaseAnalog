@@ -47,6 +47,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
     var _burnIn;
     var _lastDensity;
     var _lastBackground;
+    var _redMoonBitmap;
 
     function initialize() {
         WatchFace.initialize();
@@ -72,6 +73,8 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         Dial.setup(dc, _cx, _cy, _radius, _scale);
         RainbowWave.setup(_cx, _cy, _radius);
+
+        _redMoonBitmap = WatchUi.loadResource(Rez.Drawables.RedMoon);
     }
 
     // Settings that change cached geometry need it rebuilt, which cannot happen
@@ -124,7 +127,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         // Only the origin moves per frame; the cached track, labels and star
         // field were built once in onLayout.
         Dial.setOffset(_ox, _oy);
-        Hands.setup(_cx + _ox, _cy + _oy, _scale);
+        Hands.setup(_cx + _ox, _cy + _oy, _scale, clock.sec);
 
         if (awake) {
             Dial.drawBackground(dc, clock.sec);
@@ -136,6 +139,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         drawDay(dc, awake);
         drawHeartRate(dc, awake);
         drawMoon(dc, awake, now);
+        //drawRedMoonSprite(dc);
 
         drawHands(dc, clock, awake);
     }
@@ -288,6 +292,24 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
     function astroTime(now) {
         if (Settings.debugTimeOffsetDays == 0.0) { return now; }
         return now + Settings.debugTimeOffsetDays * 86400.0;
+    }
+
+    // Scratch: the red moon sprite, centred on the face at a fraction of the
+    // screen radius so it reads as an accent rather than covering the dial.
+    // drawScaledBitmap rather than drawBitmap2+transform: the resource
+    // compiler palettises the PNG, and drawBitmap2 refuses a palettised
+    // source once a :transform is supplied (see Dial.renderLabel).
+    const RED_MOON_SPRITE_SCALE = 0.35; // sprite diameter as a fraction of _radius
+
+    (:typecheck(false))
+    function drawRedMoonSprite(dc) {
+        if (_redMoonBitmap == null) { return; }
+
+        var size = (_radius * RED_MOON_SPRITE_SCALE).toNumber();
+        var x = (_cx + _ox - size / 2.0).toNumber();
+        var y = (_cy + _oy - size / 2.0).toNumber() + _h / 4.4;
+
+        dc.drawScaledBitmap(x, y, size, size, _redMoonBitmap);
     }
 
     // --- Hands --------------------------------------------------------------

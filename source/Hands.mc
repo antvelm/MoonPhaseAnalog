@@ -22,15 +22,41 @@ module Hands {
     const TIP_SEGMENTS  = 10;
     const TAIL_SEGMENTS = 6;
 
+    // Floors for the hollow style, in device pixels. A border thinner than
+    // MIN_RIM disappears into the background, and a core narrower than
+    // MIN_CORE is a ragged slit rather than a cut-out; either way the hand is
+    // better off solid.
+    const MIN_RIM  = 1.0;
+    const MIN_CORE = 1.0;
+
+    // How far the chosen hand colour is pulled down in always-on mode. 0.35
+    // lands plain white on 0x595959, which is where the old fixed low-power
+    // grey sat - so white hands look exactly as they did, and a coloured hand
+    // now keeps its hue when dimmed instead of reverting to grey.
+    const LOW_POWER_LEVEL = 0.35;
+
     // Set once per frame by the view; saves threading them through every call.
     var _cx = 0;
     var _cy = 0;
     var _scale = 1.0;
+    var _color = Theme.HAND_WHITE;
 
-    function setup(cx, cy, scale) {
+    function setup(cx, cy, scale, sec) {
         _cx = cx;
         _cy = cy;
         _scale = scale;
+        _color = baseColor(sec);
+    }
+
+    // The hand colour before the rainbow wave gets a say. Spectrum rides the
+    // same hue as the second hand, so the whole time display glows as one and
+    // turns through the wheel over a minute; the rest are fixed presets.
+    (:typecheck(false))
+    function baseColor(sec) {
+        if (Settings.handColor == Settings.HAND_COLOR_SPECTRUM) {
+            return Theme.hsvToColor(Theme.hueForSecond(sec), 0.55, 1.0);
+        }
+        return Theme.handPreset(Settings.handColor);
     }
 
     function scaled(v) {
@@ -50,20 +76,59 @@ module Hands {
         var sa = Math.sin(angle);
         var body = outline(length, baseHalf, tipHalf, tail, ca, sa);
 
+        // Hollow interior. The silhouette is the convex hull of the two cap
+        // circles, and shrinking both radii by a constant while their centres
+        // stay put is exactly a uniform inward offset of that hull - so the
+        // same builder, run with every dimension pulled in by `rim`, gives a
+        // border of even thickness with no second construction to keep in step.
+        // Passing length and tail in reduced by the same amount is what holds
+        // the two centres still.
+        var rim = rimWidth(tipHalf);
+        var core = null;
+        if (rim != null) {
+            core = outline(length - rim, baseHalf - rim, tipHalf - rim, tail - rim, ca, sa);
+        }
+
         if (!awake) {
-            dc.setColor(Theme.HAND_DIM, Gfx.COLOR_TRANSPARENT);
+            dc.setColor(Theme.dim(_color, LOW_POWER_LEVEL), Gfx.COLOR_TRANSPARENT);
             dc.setPenWidth(1);
             strokePolygon(dc, body);
+            if (core != null) { strokePolygon(dc, core); }
             return;
         }
 
         // Tint at the hand's midpoint so the rainbow wave washes over it.
         var midX = _cx + length * 0.5 * sa;
         var midY = _cy - length * 0.5 * ca;
-        var color = RainbowWave.tint(Theme.HAND_OUTLINE, midX, midY);
+        var color = RainbowWave.tint(_color, midX, midY);
 
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
         dc.fillPolygon(body);
+
+        if (core != null) {
+            // Dc has no clipping, so the cut-out is repainted in the dial's own
+            // black rather than left see-through. On an AMOLED face that reads
+            // the same everywhere except over the moon subdial, which the hand
+            // would have covered solid anyway.
+            dc.setColor(Theme.BG, Gfx.COLOR_TRANSPARENT);
+            dc.fillPolygon(core);
+        }
+    }
+
+    // Border thickness for the hollow style, or null to draw the hand solid.
+    // Settings.handHollow is the cut-out's width as a percentage of the hand's
+    // width at the tip; the border it implies there is then held constant all
+    // the way down, so the cut-out opens up towards the centre along with the
+    // hand.
+    (:typecheck(false))
+    function rimWidth(tipHalf) {
+        var pct = Settings.handHollow;
+        if (pct <= 0) { return null; }
+
+        var rim = tipHalf * (1.0 - pct / 100.0);
+        if (rim < MIN_RIM) { rim = MIN_RIM; }
+        if (tipHalf - rim < MIN_CORE) { return null; }
+        return rim;
     }
 
     // The closed silhouette in screen space: tip cap first, then round the

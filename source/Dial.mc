@@ -31,14 +31,13 @@ module Dial {
     // the second track's radius: bigger, so they still read at that distance.
     const HOUR_FONT_OUTER = Gfx.FONT_MEDIUM;
 
-    // Radial tick lengths/weights for HourMarkStyle's Lines modes, in pixels
-    // before scaling. Major is used for the eight non-cardinal hours in the
-    // plain Lines mode (12/3/6/9 get numerals instead), and at 12/3/6/9 only
-    // in the cardinal-only mode; minor fills the other eight hours there.
+    // Radial tick lengths for HourMarkStyle's Lines modes, in pixels before
+    // scaling. Major is used for the eight non-cardinal hours in the plain
+    // Lines mode (12/3/6/9 get numerals instead), and at 12/3/6/9 only in the
+    // cardinal-only mode; minor fills the other eight hours there. The pen
+    // widths and colours of these ticks live in Theme (HOUR_TICK_*).
     const HOUR_TICK_MAJOR_LEN = 14;
-    const HOUR_TICK_MAJOR_W   = 3;
     const HOUR_TICK_MINOR_LEN = 6;
-    const HOUR_TICK_MINOR_W   = 2;
 
     // Tick dot radii, in pixels before scaling to the watch size.
     const DOT_MINOR = 2;
@@ -311,15 +310,16 @@ module Dial {
     // style.
     (:typecheck(false))
     function drawHourTicks(dc, awake, r, cardinalOnly, skipCardinal) {
-        var majorColor = awake ? Theme.NUMERAL : Theme.NUMERAL_DIM;
-        var minorColor = awake ? Theme.TICK_MAJOR : Theme.TICK_DIM;
+        var majorColor = awake ? Theme.HOUR_TICK_MAJOR : Theme.HOUR_TICK_MAJOR_DIM;
+        var minorColor = awake ? Theme.HOUR_TICK_MINOR : Theme.HOUR_TICK_MINOR_DIM;
 
         for (var h = 1; h <= 12; h += 1) {
             var isCardinal = (h % 3 == 0);
             if (skipCardinal && isCardinal) { continue; }
             var isMajor = !cardinalOnly || isCardinal;
             var len = scaled(isMajor ? HOUR_TICK_MAJOR_LEN : HOUR_TICK_MINOR_LEN);
-            var w   = scaled(isMajor ? HOUR_TICK_MAJOR_W   : HOUR_TICK_MINOR_W);
+            var w   = scaled(isMajor ? Theme.HOUR_TICK_MAJOR_W
+                                     : Theme.HOUR_TICK_MINOR_W);
             if (w < 1) { w = 1; }
 
             var a = (h / 12.0) * 2.0 * Math.PI;

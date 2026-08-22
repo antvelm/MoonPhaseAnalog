@@ -10,10 +10,7 @@ module Theme {
     // --- Monochrome base (packed 0xRRGGBB) ---
     const BG           = 0x000000;   // true black (AMOLED pixels off)
     const WHITE        = 0xFFFFFF;
-    const HAND_FILL    = 0xE6E6EC;   // cool white spine
     const HAND_OUTLINE = 0xFFFFFF;
-    const HAND_DIM     = 0x5A5A62;   // low-power outline
-    const HAND_LUME    = 0xD8F4E4;   // faint green-white lume block (baton style)
     const TICK_DIM     = 0x363640;   // minute dots
     const TICK_MAJOR   = 0x9AA0AA;   // quarter dots
     const ORBIT_RING   = 0x1C1C22;
@@ -21,6 +18,34 @@ module Theme {
     const READOUT_DIM  = 0x66666E;
     const HR_HEART     = 0xC85A5A;   // muted red heart glyph
     const HUB          = 0xFFFFFF;
+
+    // --- Hand colour presets (Settings.HandColor) ---
+    // Every one of these is a light tint rather than a saturated hue: the hands
+    // sit over a black dial and have to stay legible at a glance, which a deep
+    // colour at this stroke width does not manage. The low-power tone is not
+    // listed - it is the chosen colour scaled by Hands.LOW_POWER_LEVEL, so a
+    // dim hand keeps its hue instead of reverting to grey.
+    const HAND_WHITE   = 0xFFFFFF;
+    const HAND_COOL    = 0xE6E6EC;   // cool white, a shade off pure
+    const HAND_LUME    = 0xD8F4E4;   // green-white, old radium lume
+    const HAND_ICE     = 0x8CCCF0;
+    const HAND_AMBER   = 0xF0B43C;
+    const HAND_ORANGE  = 0xF07028;
+    const HAND_RED     = 0xE2483C;
+    const HAND_MAGENTA = 0xE05CC8;
+
+    // Settings.HandColor index -> packed colour. The spectrum entry is not
+    // here: it has no fixed value and is resolved per frame in Hands.baseColor.
+    function handPreset(choice) {
+        if (choice == 1) { return HAND_COOL; }
+        if (choice == 2) { return HAND_LUME; }
+        if (choice == 3) { return HAND_ICE; }
+        if (choice == 4) { return HAND_AMBER; }
+        if (choice == 5) { return HAND_ORANGE; }
+        if (choice == 6) { return HAND_RED; }
+        if (choice == 7) { return HAND_MAGENTA; }
+        return HAND_WHITE;
+    }
 
     // --- Numeral rings ---
     // Hours read bright so they carry the time; seconds stay grey so the
@@ -30,6 +55,18 @@ module Theme {
     const SEC_NUMERAL  = 0x70707A;   // 5-second numerals, grey
     const SEC_NUM_Q    = 0x9EA4AE;   // quarter seconds (60/15/30/45), a step up
     const DAY_WEEK     = 0x8A8A92;   // the "FRI" half of the date
+
+    // --- Hour tick lines (Settings.hourMarkStyle's two Lines modes) ---
+    // Major ticks stand in for a numeral, so they stay a step above the minors;
+    // they are not full white, so they do not compete with the hands. The _DIM
+    // pair is low power. Widths are pen widths in pixels before Dial.scaled();
+    // the matching tick lengths are geometry and stay in Dial.
+    const HOUR_TICK_MAJOR     = 0xB0B4BC;
+    const HOUR_TICK_MAJOR_DIM = 0x4A4A52;
+    const HOUR_TICK_MINOR     = 0x6E7480;
+    const HOUR_TICK_MINOR_DIM = 0x2A2A32;
+    const HOUR_TICK_MAJOR_W   = 5;
+    const HOUR_TICK_MINOR_W   = 4;
 
     // --- Background ornament ---
     const STAR         = 0x50505A;   // legacy / mid star
