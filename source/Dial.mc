@@ -160,16 +160,31 @@ module Dial {
         // Position, then turn so the label reads outward, then shrink: XTINY is
         // the smallest built-in font, so SEC_LABEL_SCALE is how these get any
         // smaller than that.
+        var x = _trackX[second] + _ox;
+        var y = _trackY[second] + _oy;
+
         var t = new Gfx.AffineTransform();
-        t.translate(_trackX[second] + _ox, _trackY[second] + _oy);
+        t.translate(x, y);
         t.rotate(angle);
         t.scale(SEC_LABEL_SCALE, SEC_LABEL_SCALE);
         t.translate(-_labelW / 2.0, -_labelH / 2.0);
 
-        dc.drawBitmap2(0, 0, bmp, {
-            :transform => t,
-            :filterMode => Gfx.FILTER_MODE_BILINEAR
-        });
+        // The label's colour is baked into the bitmap, so the rainbow wave
+        // cannot blend it the way tint() does elsewhere -- :tintColor repaints
+        // the glyph wholesale instead, which at this size reads the same.
+        var wave = RainbowWave.tintColor(x, y);
+        if (wave == null) {
+            dc.drawBitmap2(0, 0, bmp, {
+                :transform => t,
+                :filterMode => Gfx.FILTER_MODE_BILINEAR
+            });
+        } else {
+            dc.drawBitmap2(0, 0, bmp, {
+                :transform => t,
+                :filterMode => Gfx.FILTER_MODE_BILINEAR,
+                :tintColor => wave
+            });
+        }
     }
 
     // --- Second track: dots, numerals and comet -----------------------------
@@ -303,11 +318,10 @@ module Dial {
         }
     }
 
-    // Radial ticks. cardinalOnly bolds and tints only 12/3/6/9, the other
-    // eight hours getting a plain minor tick, for the cardinal-only style.
-    // skipCardinal omits 12/3/6/9 entirely -- they carry a numeral instead --
-    // and draws the remaining eight at the bold weight, for the hybrid Lines
-    // style.
+    // Radial ticks. cardinalOnly bolds only 12/3/6/9, the other eight hours
+    // getting a plain minor tick, for the cardinal-only style. skipCardinal
+    // omits 12/3/6/9 entirely -- they carry a numeral instead -- and draws the
+    // remaining eight at the bold weight, for the hybrid Lines style.
     (:typecheck(false))
     function drawHourTicks(dc, awake, r, cardinalOnly, skipCardinal) {
         var majorColor = awake ? Theme.HOUR_TICK_MAJOR : Theme.HOUR_TICK_MAJOR_DIM;
@@ -330,9 +344,8 @@ module Dial {
             var x1 = _cx + (r + len / 2.0) * sa + _ox;
             var y1 = _cy - (r + len / 2.0) * ca + _oy;
 
-            var color = isMajor
-                ? RainbowWave.tint(majorColor, (x0 + x1) / 2, (y0 + y1) / 2)
-                : minorColor;
+            var color = RainbowWave.tint(isMajor ? majorColor : minorColor,
+                (x0 + x1) / 2, (y0 + y1) / 2);
             dc.setColor(color, Gfx.COLOR_TRANSPARENT);
             dc.setPenWidth(w);
             dc.drawLine(x0, y0, x1, y1);
@@ -342,15 +355,17 @@ module Dial {
 
     // --- Orbit ring ---------------------------------------------------------
 
+    // Left out of the rainbow wave: it is ornament rather than a mark, and a
+    // lit ring competes with the second track the wave is crossing.
     (:typecheck(false))
     function drawOrbitRing(dc) {
         var r = _radius * R_ORBIT;
         var n = 72;
+        dc.setColor(Theme.ORBIT_RING, Gfx.COLOR_TRANSPARENT);
         for (var i = 0; i < n; i += 1) {
             var a = (i / (n * 1.0)) * 2.0 * Math.PI;
             var x = _cx + r * Math.sin(a) + _ox;
             var y = _cy - r * Math.cos(a) + _oy;
-            dc.setColor(RainbowWave.tint(Theme.ORBIT_RING, x, y), Gfx.COLOR_TRANSPARENT);
             dc.fillCircle(x, y, 1);
         }
     }
@@ -460,9 +475,12 @@ module Dial {
 
         var n = _zodiacPts.size() / 3;
 
+        // The joining lines sit out the rainbow wave; only the stars themselves
+        // light up, so the constellation keeps its shape as the band crosses.
         if (withLines) {
             var pairs = Zodiac.lines(sign);
             dc.setPenWidth(1);
+            dc.setColor(Theme.ZODIAC_LINE, Gfx.COLOR_TRANSPARENT);
             for (var i = 0; i + 1 < pairs.size(); i += 2) {
                 var a = pairs[i];
                 var b = pairs[i + 1];
@@ -471,9 +489,6 @@ module Dial {
                 var ay = _zodiacPts[a * 3 + 1] + _oy;
                 var bx = _zodiacPts[b * 3] + _ox;
                 var by = _zodiacPts[b * 3 + 1] + _oy;
-                dc.setColor(
-                    RainbowWave.tint(Theme.ZODIAC_LINE, (ax + bx) / 2, (ay + by) / 2),
-                    Gfx.COLOR_TRANSPARENT);
                 dc.drawLine(ax, ay, bx, by);
             }
         }

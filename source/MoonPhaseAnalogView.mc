@@ -13,7 +13,8 @@ using Toybox.Lang;
 //   - procedural moon-phase subdial at 6 o'clock, which turns copper during a
 //     lunar eclipse and shows a corona during a solar one
 //   - "FRI 27" date at 3 o'clock, heart rate at 9 o'clock
-//   - once a day, a rainbow wave washes outward across the whole face
+//   - every few hours, a rainbow wave washes outward across the dial's
+//     numbers, marks and stars
 //
 // This class owns layout and ordering; the drawing lives in Dial, Hands and
 // MoonDial. Everything is derived from the screen radius, so one code path
@@ -168,12 +169,13 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         var dowColor = awake ? Theme.DAY_WEEK : Theme.READOUT_DIM;
         var dayColor = awake ? Theme.READOUT : Theme.READOUT_DIM;
 
-        dc.setColor(RainbowWave.tint(dowColor, left + dowW / 2, cy), Gfx.COLOR_TRANSPARENT);
+        // Neither half is tinted: like the heart rate opposite it, the date sits
+        // out the rainbow wave, which colours the dial's own marks and numerals.
+        dc.setColor(dowColor, Gfx.COLOR_TRANSPARENT);
         dc.drawText(left, cy, dowFont, dow,
             Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
 
-        dc.setColor(RainbowWave.tint(dayColor, left + dowW + gap + dayW / 2, cy),
-            Gfx.COLOR_TRANSPARENT);
+        dc.setColor(dayColor, Gfx.COLOR_TRANSPARENT);
         dc.drawText(left + dowW + gap, cy, dayFont, day,
             Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
     }
@@ -201,19 +203,20 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         drawHeart(dc, hx, cy, hs, awake);
 
-        dc.setColor(
-            RainbowWave.tint(awake ? Theme.READOUT : Theme.READOUT_DIM, tx + textW / 2, cy),
-            Gfx.COLOR_TRANSPARENT);
+        // Not tinted: the heart rate is the one readout the rainbow wave leaves
+        // alone, glyph and number both, so it stays legible as the band crosses.
+        dc.setColor(awake ? Theme.READOUT : Theme.READOUT_DIM, Gfx.COLOR_TRANSPARENT);
         dc.drawText(tx, cy, font, text,
             Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
     }
 
     // Two lobes and a point, with a cusp notch between the lobes so it reads as
-    // a heart rather than a blob at this size.
+    // a heart rather than a blob at this size. See drawHeartRate: the rainbow
+    // wave passes the whole heart-rate readout by.
     (:typecheck(false))
     function drawHeart(dc, cx, cy, hs, awake) {
         var color = awake ? Theme.HR_HEART : Theme.READOUT_DIM;
-        dc.setColor(RainbowWave.tint(color, cx, cy), Gfx.COLOR_TRANSPARENT);
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
 
         var lobe = hs * 0.52;
         dc.fillCircle(cx - hs * 0.45, cy - hs * 0.12, lobe);

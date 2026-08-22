@@ -97,12 +97,10 @@ module Hands {
             return;
         }
 
-        // Tint at the hand's midpoint so the rainbow wave washes over it.
-        var midX = _cx + length * 0.5 * sa;
-        var midY = _cy - length * 0.5 * ca;
-        var color = RainbowWave.tint(_color, midX, midY);
-
-        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        // The rainbow wave deliberately passes the hands by: it colours the
+        // dial's marks and readouts only, so the time stays readable while it
+        // crosses.
+        dc.setColor(_color, Gfx.COLOR_TRANSPARENT);
         dc.fillPolygon(body);
 
         if (core != null) {

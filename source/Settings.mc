@@ -60,6 +60,7 @@ module Settings {
     var zodiacSign;
     var enableRainbowWave;
     var waveHour;
+    var waveIntervalHours;
     var waveTestMode;
     var eclipseEffects;
     var eclipseVisibility;
@@ -91,6 +92,7 @@ module Settings {
         zodiacSign          = numberOr("ZodiacSign", 0, 0, 12);
         enableRainbowWave   = boolOr("EnableRainbowWave", true);
         waveHour            = numberOr("WaveHour", 0, 0, 23);
+        waveIntervalHours   = numberOr("WaveIntervalHours", 3, 1, 24);
         waveTestMode        = boolOr("WaveTestMode", false);
         eclipseEffects      = boolOr("EclipseEffects", true);
         eclipseVisibility   = numberOr("EclipseVisibility", 0, 0, 1);

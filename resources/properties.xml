@@ -91,18 +91,24 @@
          the same sky. Changing it rebuilds the field on the next draw. -->
     <property id="StarDensity" type="number">3</property>
 
-    <!-- Rainbow wave: a colour sweep across the whole face, once per day. -->
+    <!-- Rainbow wave: a colour sweep outward across the dial's marks and
+         numbers, every few hours. -->
 
-    <!-- Master switch for the daily wave. Note that WaveTestMode overrides
-         this: with test mode on the wave fires even when this is false. -->
+    <!-- Master switch for the wave. Note that WaveTestMode overrides this:
+         with test mode on the wave fires even when this is false. -->
     <property id="EnableRainbowWave" type="boolean">true</property>
 
-    <!-- Earliest local hour (0-23) the daily wave may fire. The wave runs at
-         the first draw at or after this hour, then not again until the date
-         changes - so 0 means "shortly after midnight", 7 means "not before
-         07:00". Raising it past the current hour postpones today's wave;
-         it does not schedule a second one. -->
+    <!-- Earliest local hour (0-23) the wave may fire, and the anchor the
+         interval counts from: slots run at WaveHour, WaveHour + interval, and
+         so on until midnight. 0 means "from shortly after midnight", 7 means
+         "not before 07:00". Raising it past the current hour postpones the
+         next wave; it does not schedule an extra one. -->
     <property id="WaveHour" type="number">0</property>
+
+    <!-- Hours between waves (1-24). The wave fires at the first draw at or
+         after each slot, so with the watch asleep it lands on the next wrist
+         raise. 24 gives the old once-a-day behaviour, at WaveHour. -->
+    <property id="WaveIntervalHours" type="number">3</property>
 
     <!-- Eclipses -->
 
@@ -151,9 +157,9 @@
          any of them set will not show reality. Return them to the defaults
          below when you are done. -->
 
-    <!-- Fire the rainbow wave at the top of every minute instead of once a day,
-         so it can be tuned without waiting. Overrides EnableRainbowWave and
-         WaveHour while it is on. -->
+    <!-- Fire the rainbow wave at the top of every minute instead of on its
+         schedule, so it can be tuned without waiting. Overrides
+         EnableRainbowWave, WaveHour and WaveIntervalHours while it is on. -->
     <property id="WaveTestMode" type="boolean">true</property>
 
     <!-- Force an eclipse regardless of the date: 0 off, 1 lunar, 2 solar.

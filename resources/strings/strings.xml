@@ -70,9 +70,12 @@
     <string id="SetShowSeconds">Show second numerals</string>
 
     <!-- Rainbow wave -->
-    <string id="SetWave">Daily rainbow wave</string>
-    <string id="SetWavePrompt">Once a day a band of spectrum washes outward across the face. It runs for about 12 seconds, and fires on the first wrist raise after the set hour.</string>
-    <string id="SetWaveHour">Rainbow wave hour</string>
+    <string id="SetWave">Rainbow wave</string>
+    <string id="SetWavePrompt">Every few hours a band of spectrum washes outward across the face, colouring the numbers, marks and stars as it passes. It runs for about 12 seconds, and fires on the first wrist raise after each slot.</string>
+    <string id="SetWaveHour">Rainbow wave start hour</string>
+    <string id="SetWaveHourPrompt">The earliest hour the wave may fire, and the hour the interval counts from.</string>
+    <string id="SetWaveInterval">Hours between waves</string>
+    <string id="SetWaveIntervalPrompt">How often the wave repeats through the day. 24 runs it once a day, at the start hour.</string>
 
     <!-- Eclipses -->
     <string id="SetEclipse">Eclipse effects</string>
@@ -95,7 +98,7 @@
 
     <!-- Testing -->
     <string id="SetWaveTest">Rainbow wave test mode</string>
-    <string id="SetWaveTestPrompt">Fire the wave at the top of every minute instead of once a day.</string>
+    <string id="SetWaveTestPrompt">Fire the wave at the top of every minute instead of on its schedule.</string>
 
     <string id="SetDebugEclipse">Force eclipse</string>
     <string id="SetDebugEclipsePrompt">Render an eclipse regardless of the date, for checking how it looks.</string>

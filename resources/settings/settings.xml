@@ -107,8 +107,14 @@
         <settingConfig type="boolean" />
     </setting>
 
-    <setting propertyKey="@Properties.WaveHour" title="@Strings.SetWaveHour">
+    <setting propertyKey="@Properties.WaveHour" title="@Strings.SetWaveHour"
+             prompt="@Strings.SetWaveHourPrompt">
         <settingConfig type="numeric" min="0" max="23" />
+    </setting>
+
+    <setting propertyKey="@Properties.WaveIntervalHours" title="@Strings.SetWaveInterval"
+             prompt="@Strings.SetWaveIntervalPrompt">
+        <settingConfig type="numeric" min="1" max="24" />
     </setting>
 
     <!-- ===== Eclipses ===== -->
