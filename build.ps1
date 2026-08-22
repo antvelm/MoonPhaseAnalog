@@ -8,10 +8,16 @@
 # Usage:
 #   .\build.ps1              # release builds for venu3 and venu3s -> bin\
 #   .\build.ps1 -Debug       # debug builds (faster, larger, for the simulator)
+#   .\build.ps1 -UnitTest    # debug build with the (:test) functions compiled in;
+#                            #   run them with tools\run-tests.ps1
 
 param(
-    [switch]$Debug
+    [switch]$Debug,
+    [switch]$UnitTest
 )
+
+# The test functions are only emitted into a debug build.
+if ($UnitTest) { $Debug = $true }
 
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
@@ -62,7 +68,7 @@ if (-not (Test-Path $key)) { throw "Missing developer_key.der. See HANDOFF.md to
 
 New-Item -ItemType Directory -Force -Path bin | Out-Null
 
-$modeLabel = if ($Debug) { "debug" } else { "release" }
+$modeLabel = if ($UnitTest) { "unit-test" } elseif ($Debug) { "debug" } else { "release" }
 
 foreach ($device in @("venu3", "venu3s")) {
     $out = "bin\MoonPhaseAstro-$device.prg"
@@ -77,6 +83,7 @@ foreach ($device in @("venu3", "venu3s")) {
         "-f", "monkey.jungle", "-o", $out, "-y", $key, "-d", $device, "-w"
     )
     if (-not $Debug) { $javaArgs += "-r" }
+    if ($UnitTest) { $javaArgs += "--unit-test" }
     & $java @javaArgs 2>&1 |
         Select-String -Pattern "BUILD|ERROR|WARNING"
     if (-not (Test-Path $out)) { throw "Build failed for $device" }

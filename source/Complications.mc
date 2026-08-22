@@ -13,6 +13,19 @@ module Complications {
         return info.day;
     }
 
+    // Three-letter weekday in caps, for the classic "FRI 27" date. FORMAT_MEDIUM
+    // returns it already localised and abbreviated; the substring guards against
+    // a language whose abbreviation is longer.
+    (:typecheck(false))
+    function dayOfWeekShort() {
+        var info = Gregorian.info(Time.now(), Time.FORMAT_MEDIUM);
+        var name = info.day_of_week;
+        if (name == null) { return ""; }
+        name = name.toUpper();
+        if (name.length() > 3) { name = name.substring(0, 3); }
+        return name;
+    }
+
     // Current heart rate in bpm, or null when nothing is available
     // (off wrist, or between optical samples in low power).
     function heartRate() {

@@ -1,0 +1,34 @@
+<properties>
+    <!-- Appearance -->
+    <property id="HandStyle" type="number">0</property>
+    <property id="CometMode" type="number">0</property>
+    <property id="CometOnFiveSec" type="boolean">false</property>
+    <property id="ShowOrbitRing" type="boolean">false</property>
+    <property id="ShowHourNumerals" type="boolean">true</property>
+    <property id="ShowSecondNumerals" type="boolean">true</property>
+    <property id="Background" type="number">0</property>
+    <property id="ZodiacSign" type="number">0</property>
+    <property id="StarDensity" type="number">2</property>
+
+    <!-- Rainbow wave -->
+    <property id="EnableRainbowWave" type="boolean">true</property>
+    <property id="WaveHour" type="number">0</property>
+
+    <!-- Eclipses -->
+    <property id="EclipseEffects" type="boolean">true</property>
+    <property id="EclipseVisibility" type="number">0</property>
+    <property id="EclipseSource" type="number">0</property>
+
+    <!-- Read-only diagnostics, written by the watch face -->
+    <property id="LastFixLat" type="float">0.0</property>
+    <property id="LastFixLon" type="float">0.0</property>
+    <property id="LastFixInfo" type="string">not read yet</property>
+    <property id="EclipseDataInfo" type="string">not read yet</property>
+
+    <!-- Testing -->
+    <property id="WaveTestMode" type="boolean">false</property>
+    <property id="DebugEclipse" type="number">0</property>
+    <property id="DebugTimeOffsetDays" type="float">0.0</property>
+    <property id="DebugLatitude" type="float">999.0</property>
+    <property id="DebugLongitude" type="float">999.0</property>
+</properties>

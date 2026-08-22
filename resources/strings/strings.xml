@@ -1,3 +1,97 @@
 <strings>
     <string id="AppName">Moon Phase Astro</string>
+
+    <!-- Appearance -->
+    <string id="SetHandStyle">Hand style</string>
+    <string id="HandDauphine">Dauphine</string>
+    <string id="HandBaton">Baton</string>
+    <string id="HandSyringe">Syringe</string>
+    <string id="HandSkeleton">Skeleton</string>
+    <string id="HandBreguet">Breguet</string>
+    <string id="HandAlpha">Alpha</string>
+    <string id="HandSword">Sword</string>
+
+    <string id="SetCometMode">Comet trail</string>
+    <string id="SetCometModePrompt">How the trail behind the second hand is coloured.</string>
+    <string id="CometClassic">Classic (one hue)</string>
+    <string id="CometSpectrumTrail">Spectrum trail</string>
+    <string id="CometSpectrumRing">Spectrum ring</string>
+
+    <string id="SetCometFive">Comet crosses the numerals</string>
+    <string id="SetCometFivePrompt">Off, the trail skips the five-second marks so it breaks around the numbers. On, it draws a dot there too and runs unbroken.</string>
+
+    <string id="SetOrbitRing">Show orbit ring</string>
+    <string id="SetOrbitRingPrompt">The faint dotted circle inside the hour numerals.</string>
+
+    <string id="SetBackground">Background</string>
+    <string id="SetBackgroundPrompt">Random starfield, or the star pattern of a zodiac constellation.</string>
+    <string id="BgStarfield">Starfield</string>
+    <string id="BgZodiacStars">Zodiac stars</string>
+    <string id="BgZodiacLines">Zodiac stars + lines</string>
+
+    <string id="SetZodiacSign">Zodiac sign</string>
+    <string id="SetZodiacSignPrompt">Auto follows the current sun sign. Only used when the background is set to a zodiac constellation.</string>
+    <string id="ZodiacAuto">Auto (current sun sign)</string>
+    <string id="ZodiacAries">Aries</string>
+    <string id="ZodiacTaurus">Taurus</string>
+    <string id="ZodiacGemini">Gemini</string>
+    <string id="ZodiacCancer">Cancer</string>
+    <string id="ZodiacLeo">Leo</string>
+    <string id="ZodiacVirgo">Virgo</string>
+    <string id="ZodiacLibra">Libra</string>
+    <string id="ZodiacScorpius">Scorpius</string>
+    <string id="ZodiacSagittarius">Sagittarius</string>
+    <string id="ZodiacCapricornus">Capricornus</string>
+    <string id="ZodiacAquarius">Aquarius</string>
+    <string id="ZodiacPisces">Pisces</string>
+
+    <string id="SetStarDensity">Star density</string>
+    <string id="DensityOff">Off</string>
+    <string id="DensitySparse">Sparse</string>
+    <string id="DensityNormal">Normal</string>
+    <string id="DensityDense">Dense</string>
+
+    <string id="SetShowHours">Show hour numerals</string>
+    <string id="SetShowSeconds">Show second numerals</string>
+
+    <!-- Rainbow wave -->
+    <string id="SetWave">Daily rainbow wave</string>
+    <string id="SetWavePrompt">Once a day a band of spectrum washes outward across the face. It runs for about 12 seconds, and fires on the first wrist raise after the set hour.</string>
+    <string id="SetWaveHour">Rainbow wave hour</string>
+
+    <!-- Eclipses -->
+    <string id="SetEclipse">Eclipse effects</string>
+    <string id="SetEclipsePrompt">Turn the moon copper during a lunar eclipse and show a corona during a solar one. Exact eclipse data is built in through 2045; after that the dates are calculated on the watch.</string>
+
+    <string id="SetEclipseVis">Show eclipses</string>
+    <string id="SetEclipseVisPrompt">"Only when visible here" uses the last known GPS position to check the eclipsed body is above your horizon. It never needs a GPS fix, and falls back to showing every eclipse when no position is available. For solar eclipses this only confirms the sun is up, not that you are on the path of totality.</string>
+    <string id="EclipseAlways">Always</string>
+    <string id="EclipseIfHere">Only when visible here</string>
+
+    <string id="SetEclipseSource">Eclipse data</string>
+    <string id="SetEclipseSourcePrompt">Built-in data covers 2025 to 2045 exactly. "Always calculate" uses the on-watch astronomy for every date instead, which is also how dates past 2045 are handled.</string>
+    <string id="EclipseSrcTable">Built in through 2045</string>
+    <string id="EclipseSrcCompute">Always calculate</string>
+
+    <!-- Diagnostics -->
+    <string id="ReadOnlyPrompt">Reported by the watch. Anything typed here is overwritten.</string>
+    <string id="SetEclipseInfo">Eclipse data status</string>
+    <string id="SetLastFix">Last position used</string>
+
+    <!-- Testing -->
+    <string id="SetWaveTest">Rainbow wave test mode</string>
+    <string id="SetWaveTestPrompt">Fire the wave at the top of every minute instead of once a day.</string>
+
+    <string id="SetDebugEclipse">Force eclipse</string>
+    <string id="SetDebugEclipsePrompt">Render an eclipse regardless of the date, for checking how it looks.</string>
+    <string id="DebugEclipseOff">Off</string>
+    <string id="DebugEclipseLunar">Force lunar</string>
+    <string id="DebugEclipseSolar">Force solar</string>
+
+    <string id="SetTimeOffset">Astronomy time offset (days)</string>
+    <string id="SetTimeOffsetPrompt">Shifts only the moon and eclipse calculations, so the face keeps showing the real time. Leave at 0 for normal use.</string>
+
+    <string id="SetDebugLat">Test latitude</string>
+    <string id="SetDebugLon">Test longitude</string>
+    <string id="SetDebugCoordPrompt">Overrides the GPS position for the eclipse visibility check. 999 means unset.</string>
 </strings>
