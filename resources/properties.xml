@@ -1,4 +1,4 @@
-<properties>
+﻿<properties>
     <!--
       Every property here is mirrored by an entry in resources/settings/settings.xml
       (except the two LastFix coordinates, which are storage only) and read through
@@ -10,14 +10,15 @@
     <!-- Appearance -->
 
     <!-- Shape of the hour and minute hands, drawn in MoonPhaseAnalogView.
-         0 Dauphine, 1 Baton, 2 Syringe, 3 Skeleton, 4 Breguet, 5 Alpha, 6 Sword. -->
-    <property id="HandStyle" type="number">1</property>
+         0 Dauphine, 1 Baton, 2 Syringe, 3 Skeleton, 4 Breguet, 5 Alpha, 6 Sword,
+         7 Loop. -->
+    <property id="HandStyle" type="number">0</property>
 
     <!-- How the second-track comet is coloured (Dial.cometColors).
          0 Classic: one hue for the whole 8-dot tail, fading behind the head.
          1 Spectrum trail: the tail runs through the spectrum as it moves.
          2 Spectrum ring: as above, over a permanently dim full colour wheel. -->
-    <property id="CometMode" type="number">0</property>
+    <property id="CometMode" type="number">1</property>
 
     <!-- What the comet does at the 5-second marks that carry a numeral.
          false: skip them, so the tail breaks around the numbers.
@@ -32,6 +33,24 @@
     <!-- Hour numerals on the inner dial. -->
     <property id="ShowHourNumerals" type="boolean">true</property>
 
+    <!-- Move the hour numerals from the inner dial out to the second track's
+         radius, in a bigger font. They stay upright there rather than
+         rotating to face outward like the 5-second numerals do, and they
+         take over that ring's 12 shared marks - ShowSecondNumerals's labels
+         are suppressed at those marks while this is on, to avoid overlap.
+         Ignored when ShowHourNumerals is false. -->
+    <property id="HourNumeralsOuter" type="boolean">false</property>
+
+    <!-- What ShowHourNumerals draws at the hour positions.
+         0 Numerals: "1".."12".
+         1 Lines: numerals at 12/3/6/9, a bold radial tick at the other
+         eight hours.
+         2 Lines, cardinal only: a bold tick at 12/3/6/9, a thin minor tick
+         at the other eight hours.
+         Ignored when ShowHourNumerals is false. HourNumeralsOuter still
+         chooses the inner or outer ring for whichever style this picks. -->
+    <property id="HourMarkStyle" type="number">1</property>
+
     <!-- Numerals every 5 seconds on the outer track. Suppressed automatically
          while the watch is asleep or cannot rotate text, whatever this says. -->
     <property id="ShowSecondNumerals" type="boolean">true</property>
@@ -41,18 +60,18 @@
          1 Zodiac stars: the sign's principal stars only.
          2 Zodiac lines: the same stars joined by constellation lines.
          StarDensity applies to mode 0 only. -->
-    <property id="Background" type="number">2</property>
+    <property id="Background" type="number">0</property>
 
     <!-- Which constellation the two zodiac backgrounds draw.
          0 Auto: follows the Sun's current sign, changing through the year.
          1-12 pin one sign, Aries through Pisces in zodiac order.
          Ignored when Background is 0. -->
-    <property id="ZodiacSign" type="number">1</property>
+    <property id="ZodiacSign" type="number">0</property>
 
     <!-- Starfield density: 0 off, 1 sparse (14 stars), 2 normal (28),
          3 dense (44). The field is seeded, so a given density always yields
          the same sky. Changing it rebuilds the field on the next draw. -->
-    <property id="StarDensity" type="number">2</property>
+    <property id="StarDensity" type="number">3</property>
 
     <!-- Rainbow wave: a colour sweep across the whole face, once per day. -->
 
@@ -121,7 +140,7 @@
 
     <!-- Force an eclipse regardless of the date: 0 off, 1 lunar, 2 solar.
          Requires EclipseEffects to be on. Off, real eclipses show normally. -->
-    <property id="DebugEclipse" type="number">1</property>
+    <property id="DebugEclipse" type="number">0</property>
 
     <!-- Shift the clock the astronomy runs on, in days; fractions are allowed
          (0.5 is twelve hours). Moves moon phase, sky position and eclipse

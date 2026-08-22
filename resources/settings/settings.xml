@@ -11,6 +11,7 @@
             <listEntry value="4">@Strings.HandBreguet</listEntry>
             <listEntry value="5">@Strings.HandAlpha</listEntry>
             <listEntry value="6">@Strings.HandSword</listEntry>
+            <listEntry value="7">@Strings.HandLoop</listEntry>
         </settingConfig>
     </setting>
 
@@ -72,6 +73,20 @@
 
     <setting propertyKey="@Properties.ShowHourNumerals" title="@Strings.SetShowHours">
         <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.HourNumeralsOuter" title="@Strings.SetHourNumeralsOuter"
+             prompt="@Strings.SetHourNumeralsOuterPrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.HourMarkStyle" title="@Strings.SetHourMarkStyle"
+             prompt="@Strings.SetHourMarkStylePrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.HourMarkNumerals</listEntry>
+            <listEntry value="1">@Strings.HourMarkLines</listEntry>
+            <listEntry value="2">@Strings.HourMarkLinesCardinal</listEntry>
+        </settingConfig>
     </setting>
 
     <setting propertyKey="@Properties.ShowSecondNumerals" title="@Strings.SetShowSeconds">

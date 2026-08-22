@@ -19,6 +19,11 @@ module Settings {
     const COMET_SPECTRUM_TRAIL = 1;
     const COMET_SPECTRUM_RING  = 2;
 
+    // --- Hour mark style ---
+    const HOUR_MARK_NUMERALS       = 0;
+    const HOUR_MARK_LINES          = 1;
+    const HOUR_MARK_LINES_CARDINAL = 2;
+
     // --- Eclipse visibility gate ---
     const ECLIPSE_ALWAYS  = 0;
     const ECLIPSE_IF_HERE = 1;
@@ -41,6 +46,8 @@ module Settings {
     var cometOnFiveSec;
     var showOrbitRing;
     var showHourNumerals;
+    var hourNumeralsOuter;
+    var hourMarkStyle;
     var showSecondNumerals;
     var starDensity;
     var background;
@@ -64,11 +71,13 @@ module Settings {
     function load() {
         if (_loaded) { return; }
 
-        handStyle           = numberOr("HandStyle", 0, 0, 6);
+        handStyle           = numberOr("HandStyle", 0, 0, 7);
         cometMode           = numberOr("CometMode", 0, 0, 2);
         cometOnFiveSec      = boolOr("CometOnFiveSec", false);
         showOrbitRing       = boolOr("ShowOrbitRing", false);
         showHourNumerals    = boolOr("ShowHourNumerals", true);
+        hourNumeralsOuter   = boolOr("HourNumeralsOuter", false);
+        hourMarkStyle       = numberOr("HourMarkStyle", 0, 0, 2);
         showSecondNumerals  = boolOr("ShowSecondNumerals", true);
         starDensity         = numberOr("StarDensity", 2, 0, 3);
         background          = numberOr("Background", 0, 0, 2);

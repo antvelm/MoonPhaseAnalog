@@ -14,7 +14,7 @@ module Dial {
     // Where each ring sits. The second track is the outermost thing on the
     // face; the tick dots and the 5-second numerals share it.
     const R_SECOND = 0.94;
-    const R_HOUR   = 0.76;
+    const R_HOUR   = 0.78;
     const R_ORBIT  = 0.60;
 
     // --- Second numerals -----------------------------------------------------
@@ -25,8 +25,20 @@ module Dial {
     const SEC_LABEL_FONT  = Gfx.FONT_XTINY;
     const SEC_LABEL_SCALE = 0.65;//0.72
 
-    // --- Hour numerals -------------------------------------------------------
-    const HOUR_FONT = Gfx.FONT_SMALL;
+    // --- Hour marks -----------------------------------------------------------
+    const HOUR_FONT       = Gfx.FONT_SMALL;
+    // Used instead of HOUR_FONT when HourNumeralsOuter moves the hours out to
+    // the second track's radius: bigger, so they still read at that distance.
+    const HOUR_FONT_OUTER = Gfx.FONT_MEDIUM;
+
+    // Radial tick lengths/weights for HourMarkStyle's Lines modes, in pixels
+    // before scaling. Major is used for the eight non-cardinal hours in the
+    // plain Lines mode (12/3/6/9 get numerals instead), and at 12/3/6/9 only
+    // in the cardinal-only mode; minor fills the other eight hours there.
+    const HOUR_TICK_MAJOR_LEN = 14;
+    const HOUR_TICK_MAJOR_W   = 3;
+    const HOUR_TICK_MINOR_LEN = 6;
+    const HOUR_TICK_MINOR_W   = 2;
 
     // Tick dot radii, in pixels before scaling to the watch size.
     const DOT_MINOR = 2;
@@ -165,7 +177,10 @@ module Dial {
 
     (:typecheck(false))
     function drawSecondTrack(dc, sec, awake) {
-        var showNumerals = Settings.showSecondNumerals && awake && _canRotate;
+        // The outer hour numerals share these same 12 marks, so they take the
+        // spot over the ordinary 5-second labels rather than overlapping them.
+        var hourOuter = Settings.showHourNumerals && Settings.hourNumeralsOuter;
+        var showNumerals = Settings.showSecondNumerals && awake && _canRotate && !hourOuter;
 
         // Which track positions the comet is lighting, and in what colour.
         var trail = null;
@@ -248,22 +263,81 @@ module Dial {
         return out;
     }
 
-    // --- Hour numerals ------------------------------------------------------
+    // --- Hour marks ----------------------------------------------------------
 
     (:typecheck(false))
-    function drawHourNumerals(dc, awake) {
+    function drawHourMarks(dc, awake) {
         if (!Settings.showHourNumerals) { return; }
 
-        var r = _radius * R_HOUR;
+        // HourNumeralsOuter moves the marks from the inner ring out to the
+        // second track's radius, whichever style is drawing them.
+        var outer = Settings.hourNumeralsOuter;
+        var r = _radius * (outer ? R_SECOND : R_HOUR);
+
+        if (Settings.hourMarkStyle == Settings.HOUR_MARK_NUMERALS) {
+            drawHourNumerals(dc, awake, r, outer, false);
+        } else if (Settings.hourMarkStyle == Settings.HOUR_MARK_LINES) {
+            // 12/3/6/9 get the numeral; the other eight hours get a tick,
+            // bold enough to read on its own since there's no numeral there.
+            drawHourNumerals(dc, awake, r, outer, true);
+            drawHourTicks(dc, awake, r, false, true);
+        } else {
+            drawHourTicks(dc, awake, r, true, false);
+        }
+    }
+
+    // Numerals stay upright at every hour position (unlike the second-track
+    // labels, which rotate to face outward). cardinalOnly restricts them to
+    // 12/3/6/9, for the hybrid Lines style.
+    (:typecheck(false))
+    function drawHourNumerals(dc, awake, r, outer, cardinalOnly) {
+        var font = outer ? HOUR_FONT_OUTER : HOUR_FONT;
         var base = awake ? Theme.NUMERAL : Theme.NUMERAL_DIM;
-        for (var h = 1; h <= 12; h += 1) {
+        var step = cardinalOnly ? 3 : 1;
+        for (var h = step; h <= 12; h += step) {
             var a = (h / 12.0) * 2.0 * Math.PI;
             var x = _cx + r * Math.sin(a) + _ox;
             var y = _cy - r * Math.cos(a) + _oy;
             dc.setColor(RainbowWave.tint(base, x, y), Gfx.COLOR_TRANSPARENT);
-            dc.drawText(x, y, HOUR_FONT, h.toString(),
+            dc.drawText(x, y, font, h.toString(),
                 Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
         }
+    }
+
+    // Radial ticks. cardinalOnly bolds and tints only 12/3/6/9, the other
+    // eight hours getting a plain minor tick, for the cardinal-only style.
+    // skipCardinal omits 12/3/6/9 entirely -- they carry a numeral instead --
+    // and draws the remaining eight at the bold weight, for the hybrid Lines
+    // style.
+    (:typecheck(false))
+    function drawHourTicks(dc, awake, r, cardinalOnly, skipCardinal) {
+        var majorColor = awake ? Theme.NUMERAL : Theme.NUMERAL_DIM;
+        var minorColor = awake ? Theme.TICK_MAJOR : Theme.TICK_DIM;
+
+        for (var h = 1; h <= 12; h += 1) {
+            var isCardinal = (h % 3 == 0);
+            if (skipCardinal && isCardinal) { continue; }
+            var isMajor = !cardinalOnly || isCardinal;
+            var len = scaled(isMajor ? HOUR_TICK_MAJOR_LEN : HOUR_TICK_MINOR_LEN);
+            var w   = scaled(isMajor ? HOUR_TICK_MAJOR_W   : HOUR_TICK_MINOR_W);
+            if (w < 1) { w = 1; }
+
+            var a = (h / 12.0) * 2.0 * Math.PI;
+            var sa = Math.sin(a);
+            var ca = Math.cos(a);
+            var x0 = _cx + (r - len / 2.0) * sa + _ox;
+            var y0 = _cy - (r - len / 2.0) * ca + _oy;
+            var x1 = _cx + (r + len / 2.0) * sa + _ox;
+            var y1 = _cy - (r + len / 2.0) * ca + _oy;
+
+            var color = isMajor
+                ? RainbowWave.tint(majorColor, (x0 + x1) / 2, (y0 + y1) / 2)
+                : minorColor;
+            dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+            dc.setPenWidth(w);
+            dc.drawLine(x0, y0, x1, y1);
+        }
+        dc.setPenWidth(1);
     }
 
     // --- Orbit ring ---------------------------------------------------------

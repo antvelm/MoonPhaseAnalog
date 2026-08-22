@@ -18,8 +18,9 @@ module Hands {
     const BREGUET  = 4;
     const ALPHA    = 5;
     const SWORD    = 6;
+    const LOOP     = 7;
 
-    const STYLE_COUNT = 7;
+    const STYLE_COUNT = 8;
 
     // Set once per frame by the view; saves threading them through every call.
     var _cx = 0;
@@ -47,6 +48,11 @@ module Hands {
         var ca = Math.cos(angle);
         var sa = Math.sin(angle);
 
+        if (style == LOOP) {
+            drawLoop(dc, ca, sa, length, halfWidth, awake);
+            return;
+        }
+
         var outer = silhouette(style, ca, sa, length, halfWidth, tail);
 
         if (!awake) {
@@ -65,6 +71,50 @@ module Hands {
         dc.fillPolygon(outer);
 
         decorate(dc, style, ca, sa, length, halfWidth, tail, body);
+    }
+
+    // Loop: one continuous stroke, never filled. It runs out from the hub as
+    // two parallel rails (so the shaft has real width but an empty channel
+    // down the middle), turns into a ring at the tip, and the hub end is
+    // itself a ring rather than a solid disc - sized off this hand's own
+    // halfWidth, so the hour and minute hands nest as two open rings around
+    // the pivot instead of one flat hub.
+    (:typecheck(false))
+    function drawLoop(dc, ca, sa, len, hw, awake) {
+        var hubR = hw * 1.3;
+        var tipR = hw * 0.8;
+        var tipDist = len - tipR;
+        var shaftHW = hw * 0.55;
+
+        var railL0 = rot( shaftHW, -hubR, ca, sa);
+        var railL1 = rot( shaftHW, -tipDist, ca, sa);
+        var railR0 = rot(-shaftHW, -hubR, ca, sa);
+        var railR1 = rot(-shaftHW, -tipDist, ca, sa);
+        var tip = rot(0, -tipDist, ca, sa);
+
+        if (!awake) {
+            dc.setColor(Theme.HAND_DIM, Gfx.COLOR_TRANSPARENT);
+            dc.setPenWidth(1);
+            dc.drawLine(railL0[0], railL0[1], railL1[0], railL1[1]);
+            dc.drawLine(railR0[0], railR0[1], railR1[0], railR1[1]);
+            dc.drawCircle(tip[0], tip[1], tipR);
+            dc.drawCircle(_cx, _cy, hubR);
+            return;
+        }
+
+        var midX = _cx - len * 0.5 * sa;
+        var midY = _cy - len * 0.5 * ca;
+        var body = RainbowWave.tint(Theme.HAND_OUTLINE, midX, midY);
+        var rimW = (hw * 0.22 + 0.5).toNumber();
+        if (rimW < 1) { rimW = 1; }
+
+        dc.setColor(body, Gfx.COLOR_TRANSPARENT);
+        dc.setPenWidth(rimW);
+        dc.drawLine(railL0[0], railL0[1], railL1[0], railL1[1]);
+        dc.drawLine(railR0[0], railR0[1], railR1[0], railR1[1]);
+        dc.drawCircle(tip[0], tip[1], tipR);
+        dc.drawCircle(_cx, _cy, hubR);
+        dc.setPenWidth(1);
     }
 
     // The outer shape of each style, in the rotated screen frame.

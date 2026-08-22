@@ -131,7 +131,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
             if (Settings.showOrbitRing) { Dial.drawOrbitRing(dc); }
         }
         Dial.drawSecondTrack(dc, clock.sec, awake);
-        Dial.drawHourNumerals(dc, awake);
+        Dial.drawHourMarks(dc, awake);
 
         drawDay(dc, awake);
         drawHeartRate(dc, awake);

@@ -10,6 +10,7 @@
     <string id="HandBreguet">Breguet</string>
     <string id="HandAlpha">Alpha</string>
     <string id="HandSword">Sword</string>
+    <string id="HandLoop">Loop</string>
 
     <string id="SetCometMode">Comet trail</string>
     <string id="SetCometModePrompt">How the trail behind the second hand is coloured.</string>
@@ -52,6 +53,15 @@
     <string id="DensityDense">Dense</string>
 
     <string id="SetShowHours">Show hour numerals</string>
+    <string id="SetHourNumeralsOuter">Hour numerals on outer ring</string>
+    <string id="SetHourNumeralsOuterPrompt">Moves the hour numerals out to the second track, bigger and upright, in place of the 5-second numerals there.</string>
+
+    <string id="SetHourMarkStyle">Hour mark style</string>
+    <string id="SetHourMarkStylePrompt">What the hour positions show: numerals, numerals at 12/3/6/9 with bold ticks elsewhere, or bold ticks only at 12/3/6/9 with thin ticks elsewhere.</string>
+    <string id="HourMarkNumerals">Numerals</string>
+    <string id="HourMarkLines">Numerals + lines</string>
+    <string id="HourMarkLinesCardinal">Lines (12/3/6/9 bold)</string>
+
     <string id="SetShowSeconds">Show second numerals</string>
 
     <!-- Rainbow wave -->
