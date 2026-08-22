@@ -11,11 +11,11 @@ using Toybox.Lang;
 // smooth animation -- the band is made wide enough that each step still reads
 // as motion rather than as a jump.
 //
-// The wash is deliberately partial: only the dial's marks and numbers are
-// passed through tint() (the second-track dots and comet, the hour numerals and
-// ticks, the 5-second numerals, the stars and the date). The hands, the moon,
-// the heart-rate readout and the ornamental lines are left alone, so the wave
-// crosses behind the time rather than swallowing it.
+// The wash is deliberately partial: only the dial's own marks go through
+// tint() -- the second-track dots and comet, the hour numerals and ticks, the
+// 5-second numerals and the background stars. The hands, the moon, the date and
+// heart-rate readouts and the ornamental lines (orbit ring, zodiac joins) are
+// left alone, so the wave crosses behind the time rather than swallowing it.
 module RainbowWave {
 
     const DURATION_SEC = 12;

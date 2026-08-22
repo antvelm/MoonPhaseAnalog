@@ -203,8 +203,8 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         drawHeart(dc, hx, cy, hs, awake);
 
-        // Not tinted: the heart rate is the one readout the rainbow wave leaves
-        // alone, glyph and number both, so it stays legible as the band crosses.
+        // Not tinted, glyph and number both: like the date opposite it, the
+        // heart rate sits out the rainbow wave.
         dc.setColor(awake ? Theme.READOUT : Theme.READOUT_DIM, Gfx.COLOR_TRANSPARENT);
         dc.drawText(tx, cy, font, text,
             Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
