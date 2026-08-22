@@ -2,25 +2,25 @@ using Toybox.Graphics as Gfx;
 using Toybox.Math;
 using Toybox.Lang;
 
-// Hour and minute hand silhouettes.
+// Hour and minute hand silhouette: a tapered baton, capped at both ends by a
+// circle and sided by the two external tangents of those circles.
 //
-// Seven styles, selected by the HandStyle property, so the final look can be
-// picked by eye on the watch instead of being decided in code. Every style is
-// built from polygons in a local frame whose tip points toward -y, then rotated
-// by the hand angle -- so adding an eighth style means adding one case to
-// silhouette() and, if it needs one, one case to decorate().
+// The whole outline — caps included — is emitted as one closed polygon, so a
+// single rasteriser draws it. Filling the shaft and then stamping a separate
+// circle on the end left the cap a pixel off the shaft edges, because the two
+// primitives round their coverage independently; a single polygon cannot come
+// apart that way. The tangent construction is also what keeps the cap flush on
+// a tapered hand: on a taper the sides meet the cap slightly past its widest
+// point, not at it.
+//
+// Built in a local frame whose tip points toward -y, then rotated by the hand
+// angle.
 module Hands {
 
-    const DAUPHINE = 0;
-    const BATON    = 1;
-    const SYRINGE  = 2;
-    const SKELETON = 3;
-    const BREGUET  = 4;
-    const ALPHA    = 5;
-    const SWORD    = 6;
-    const LOOP     = 7;
-
-    const STYLE_COUNT = 8;
+    // Segments per cap. The tail cap ends up mostly under the hub, so it gets
+    // away with fewer.
+    const TIP_SEGMENTS  = 10;
+    const TAIL_SEGMENTS = 6;
 
     // Set once per frame by the view; saves threading them through every call.
     var _cx = 0;
@@ -40,223 +40,72 @@ module Hands {
     // Draw one hand.
     //   angle      radians, 0 = straight up, increasing clockwise
     //   length     tip distance from centre, pixels
-    //   halfWidth  nominal half width at the widest point, pixels
+    //   baseHalf   half width at the widest point, just behind the hub
+    //   tipHalf    half width at the tip, i.e. the tip cap's radius
     //   tail       counterweight length past the centre, pixels
     //   awake      false => low-power wireframe
     (:typecheck(false))
-    function draw(dc, style, angle, length, halfWidth, tail, awake) {
+    function draw(dc, angle, length, baseHalf, tipHalf, tail, awake) {
         var ca = Math.cos(angle);
         var sa = Math.sin(angle);
-
-        if (style == LOOP) {
-            drawLoop(dc, ca, sa, length, halfWidth, awake);
-            return;
-        }
-
-        var outer = silhouette(style, ca, sa, length, halfWidth, tail);
+        var body = outline(length, baseHalf, tipHalf, tail, ca, sa);
 
         if (!awake) {
             dc.setColor(Theme.HAND_DIM, Gfx.COLOR_TRANSPARENT);
             dc.setPenWidth(1);
-            strokePolygon(dc, outer);
+            strokePolygon(dc, body);
             return;
         }
 
         // Tint at the hand's midpoint so the rainbow wave washes over it.
-        var midX = _cx - length * 0.5 * sa;
+        var midX = _cx + length * 0.5 * sa;
         var midY = _cy - length * 0.5 * ca;
-        var body = RainbowWave.tint(Theme.HAND_OUTLINE, midX, midY);
+        var color = RainbowWave.tint(Theme.HAND_OUTLINE, midX, midY);
 
-        dc.setColor(body, Gfx.COLOR_TRANSPARENT);
-        dc.fillPolygon(outer);
-
-        decorate(dc, style, ca, sa, length, halfWidth, tail, body);
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        dc.fillPolygon(body);
     }
 
-    // Loop: one continuous stroke, never filled. It runs out from the hub as
-    // two parallel rails (so the shaft has real width but an empty channel
-    // down the middle), turns into a ring at the tip, and the hub end is
-    // itself a ring rather than a solid disc - sized off this hand's own
-    // halfWidth, so the hour and minute hands nest as two open rings around
-    // the pivot instead of one flat hub.
+    // The closed silhouette in screen space: tip cap first, then round the
+    // back over the tail cap. Points on a cap are centre + r * (sin t, -cos t),
+    // so t = 0 points at the tip.
     (:typecheck(false))
-    function drawLoop(dc, ca, sa, len, hw, awake) {
-        var hubR = hw * 1.3;
-        var tipR = hw * 0.8;
-        var tipDist = len - tipR;
-        var shaftHW = hw * 0.55;
+    function outline(length, baseHalf, tipHalf, tail, ca, sa) {
+        var tipY  = -(length - tipHalf);   // tip cap centre
+        var tailY = tail - baseHalf;       // tail cap centre
+        var span  = tailY - tipY;
 
-        var railL0 = rot( shaftHW, -hubR, ca, sa);
-        var railL1 = rot( shaftHW, -tipDist, ca, sa);
-        var railR0 = rot(-shaftHW, -hubR, ca, sa);
-        var railR1 = rot(-shaftHW, -tipDist, ca, sa);
-        var tip = rot(0, -tipDist, ca, sa);
+        // A tangent touching both caps leaves each one leaning off the waist by
+        // asin((baseHalf - tipHalf) / span). With no taper that is zero and the
+        // caps are plain semicircles.
+        var lean = 0.0;
+        if (span > 0.0) {
+            var s = (baseHalf - tipHalf) / span;
+            if (s > 1.0) { s = 1.0; } else if (s < -1.0) { s = -1.0; }
+            lean = Math.asin(s);
+        }
+        var edge = Math.PI / 2.0 - lean;   // half-sweep of the tip cap
 
-        if (!awake) {
-            dc.setColor(Theme.HAND_DIM, Gfx.COLOR_TRANSPARENT);
-            dc.setPenWidth(1);
-            dc.drawLine(railL0[0], railL0[1], railL1[0], railL1[1]);
-            dc.drawLine(railR0[0], railR0[1], railR1[0], railR1[1]);
-            dc.drawCircle(tip[0], tip[1], tipR);
-            dc.drawCircle(_cx, _cy, hubR);
-            return;
+        var pts = new [TIP_SEGMENTS + TAIL_SEGMENTS + 2];
+        var n = 0;
+
+        // Tip cap: -x tangent point, over the tip, to the +x tangent point.
+        var step = 2.0 * edge / TIP_SEGMENTS;
+        for (var i = 0; i <= TIP_SEGMENTS; i += 1) {
+            var t = -edge + step * i;
+            pts[n] = rot(tipHalf * Math.sin(t), tipY - tipHalf * Math.cos(t), ca, sa);
+            n += 1;
         }
 
-        var midX = _cx - len * 0.5 * sa;
-        var midY = _cy - len * 0.5 * ca;
-        var body = RainbowWave.tint(Theme.HAND_OUTLINE, midX, midY);
-        var rimW = (hw * 0.22 + 0.5).toNumber();
-        if (rimW < 1) { rimW = 1; }
-
-        dc.setColor(body, Gfx.COLOR_TRANSPARENT);
-        dc.setPenWidth(rimW);
-        dc.drawLine(railL0[0], railL0[1], railL1[0], railL1[1]);
-        dc.drawLine(railR0[0], railR0[1], railR1[0], railR1[1]);
-        dc.drawCircle(tip[0], tip[1], tipR);
-        dc.drawCircle(_cx, _cy, hubR);
-        dc.setPenWidth(1);
-    }
-
-    // The outer shape of each style, in the rotated screen frame.
-    (:typecheck(false))
-    function silhouette(style, ca, sa, len, hw, tail) {
-        switch (style) {
-            case BATON:
-                return [
-                    rot( hw, -len, ca, sa),
-                    rot( hw,  tail, ca, sa),
-                    rot(-hw,  tail, ca, sa),
-                    rot(-hw, -len, ca, sa)
-                ];
-
-            case SYRINGE:
-                var neck = -len * 0.62;
-                var shaft = hw * 0.42;
-                return [
-                    rot(0, -len, ca, sa),
-                    rot( hw * 0.85, neck, ca, sa),
-                    rot( shaft, neck, ca, sa),
-                    rot( shaft, tail, ca, sa),
-                    rot(-shaft, tail, ca, sa),
-                    rot(-shaft, neck, ca, sa),
-                    rot(-hw * 0.85, neck, ca, sa)
-                ];
-
-            case SKELETON:
-                return [
-                    rot(0, -len, ca, sa),
-                    rot( hw, -len * 0.5, ca, sa),
-                    rot( hw * 0.6, tail, ca, sa),
-                    rot(-hw * 0.6, tail, ca, sa),
-                    rot(-hw, -len * 0.5, ca, sa)
-                ];
-
-            case BREGUET:
-                // Slim shaft; the pierced circle near the tip is drawn in
-                // decorate() so the hole can be punched out of it.
-                var stem = hw * 0.30;
-                return [
-                    rot( stem, -len, ca, sa),
-                    rot( stem,  tail, ca, sa),
-                    rot(-stem,  tail, ca, sa),
-                    rot(-stem, -len, ca, sa)
-                ];
-
-            case ALPHA:
-                var shoulder = -len * 0.32;
-                var waist = hw * 0.5;
-                return [
-                    rot(0, -len, ca, sa),
-                    rot( hw * 1.35, shoulder, ca, sa),
-                    rot( waist, shoulder, ca, sa),
-                    rot( waist, tail, ca, sa),
-                    rot(-waist, tail, ca, sa),
-                    rot(-waist, shoulder, ca, sa),
-                    rot(-hw * 1.35, shoulder, ca, sa)
-                ];
-
-            case SWORD:
-                return [
-                    rot(0, -len, ca, sa),
-                    rot( hw * 0.72, -len * 0.76, ca, sa),
-                    rot( hw * 0.52, tail * 0.2, ca, sa),
-                    rot( hw * 0.46, tail, ca, sa),
-                    rot(-hw * 0.46, tail, ca, sa),
-                    rot(-hw * 0.52, tail * 0.2, ca, sa),
-                    rot(-hw * 0.72, -len * 0.76, ca, sa)
-                ];
-
-            default:   // DAUPHINE
-                return [
-                    rot(0, -len, ca, sa),
-                    rot( hw, -len * 0.42, ca, sa),
-                    rot( hw * 0.45, tail, ca, sa),
-                    rot(-hw * 0.45, tail, ca, sa),
-                    rot(-hw, -len * 0.42, ca, sa)
-                ];
+        // Tail cap: on round the back, landing where the tip cap started.
+        step = (2.0 * Math.PI - 2.0 * edge) / TAIL_SEGMENTS;
+        for (var i = 0; i <= TAIL_SEGMENTS; i += 1) {
+            var t = edge + step * i;
+            pts[n] = rot(baseHalf * Math.sin(t), tailY - baseHalf * Math.cos(t), ca, sa);
+            n += 1;
         }
-    }
 
-    // Per-style detailing drawn on top of the filled silhouette.
-    (:typecheck(false))
-    function decorate(dc, style, ca, sa, len, hw, tail, body) {
-        switch (style) {
-            case DAUPHINE:
-                // The facet: shade the left half so the blade reads as folded
-                // along its centreline rather than flat.
-                dc.setColor(Theme.dim(body, 0.62), Gfx.COLOR_TRANSPARENT);
-                dc.fillPolygon([
-                    rot(0, -len, ca, sa),
-                    rot(0, tail, ca, sa),
-                    rot(-hw * 0.45, tail, ca, sa),
-                    rot(-hw, -len * 0.42, ca, sa)
-                ]);
-                break;
-
-            case BATON:
-                // Lume block near the tip.
-                var lw = hw * 0.55;
-                dc.setColor(Theme.HAND_LUME, Gfx.COLOR_TRANSPARENT);
-                dc.fillPolygon([
-                    rot( lw, -len * 0.94, ca, sa),
-                    rot( lw, -len * 0.60, ca, sa),
-                    rot(-lw, -len * 0.60, ca, sa),
-                    rot(-lw, -len * 0.94, ca, sa)
-                ]);
-                break;
-
-            case SKELETON:
-                // Hollow it out, then lay a thin spine back down the middle.
-                var inner = silhouette(SKELETON, ca, sa, len - scaled(4), hw * 0.52, tail * 0.5);
-                dc.setColor(Theme.BG, Gfx.COLOR_TRANSPARENT);
-                dc.fillPolygon(inner);
-                var spine = silhouette(SKELETON, ca, sa, len - scaled(3), hw * 0.16, tail * 0.4);
-                dc.setColor(Theme.dim(body, 0.85), Gfx.COLOR_TRANSPARENT);
-                dc.fillPolygon(spine);
-                break;
-
-            case BREGUET:
-                // Pomme: a filled circle near the tip with the centre punched out.
-                var pr = hw * 0.95;
-                var pc = rot(0, -len * 0.80, ca, sa);
-                dc.setColor(body, Gfx.COLOR_TRANSPARENT);
-                dc.fillCircle(pc[0], pc[1], pr);
-                dc.setColor(Theme.BG, Gfx.COLOR_TRANSPARENT);
-                dc.fillCircle(pc[0], pc[1], pr * 0.52);
-                break;
-
-            case SWORD:
-                // Bevel down one edge.
-                dc.setColor(Theme.dim(body, 0.55), Gfx.COLOR_TRANSPARENT);
-                dc.fillPolygon([
-                    rot(0, -len, ca, sa),
-                    rot(0, tail, ca, sa),
-                    rot(-hw * 0.46, tail, ca, sa),
-                    rot(-hw * 0.52, tail * 0.2, ca, sa),
-                    rot(-hw * 0.72, -len * 0.76, ca, sa)
-                ]);
-                break;
-        }
+        return pts;
     }
 
     // Rotate a local point (tip toward -y) into screen space.

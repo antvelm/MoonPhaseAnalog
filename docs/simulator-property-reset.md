@@ -7,7 +7,7 @@ and how it was found.
 
 ## Symptom
 
-Rebuilding with a new property default (e.g. `HandStyle`, `DebugEclipse`,
+Rebuilding with a new property default (e.g. `CometMode`, `DebugEclipse`,
 `ShowHourNumerals`) and relaunching shows the *old* value, no matter how the
 simulator is restarted. This affects **every property type** — number,
 float, and boolean all showed it once tested with an actual before/after

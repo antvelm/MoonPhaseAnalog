@@ -86,7 +86,6 @@ function Write-Properties([hashtable]$overrides) {
 # Neutral baseline: every scenario merges its own overrides on top of this,
 # so each shot isolates the setting(s) it's demonstrating.
 $baseline = @{
-    HandStyle           = 1
     CometMode           = 0
     CometOnFiveSec      = "false"
     ShowOrbitRing       = "false"
@@ -118,11 +117,6 @@ $zodiacSigns = @("aries","taurus","gemini","cancer","leo","virgo",
                  "libra","scorpio","sagittarius","capricorn","aquarius","pisces")
 
 $scenarios = New-Object System.Collections.Generic.List[object]
-
-$handNames = @("dauphine","baton","syringe","skeleton","breguet","alpha","sword")
-for ($i = 0; $i -lt 7; $i++) {
-    $scenarios.Add(@{ Name = "hand-style-$i-$($handNames[$i])"; Overrides = (Merge @{ HandStyle = $i; Background = 0 }) })
-}
 
 $cometNames = @("classic","spectrum-trail","spectrum-ring")
 for ($i = 0; $i -lt 3; $i++) {
@@ -160,7 +154,7 @@ $scenarios.Add(@{ Name = "eclipse-lunar"; Overrides = (Merge @{ EclipseEffects =
 $scenarios.Add(@{ Name = "eclipse-solar"; Overrides = (Merge @{ EclipseEffects = "true"; DebugEclipse = 2; Background = 0 }) })
 
 if ($VerifyOnly) {
-    $scenarios = $scenarios | Where-Object { $_.Name -eq "hand-style-0-dauphine" -or $_.Name -eq "hand-style-3-skeleton" }
+    $scenarios = $scenarios | Where-Object { $_.Name -eq "comet-mode-0-classic" -or $_.Name -eq "orbit-ring-true" }
 }
 
 Write-Host "`n$($scenarios.Count) scenario(s) queued.`n"

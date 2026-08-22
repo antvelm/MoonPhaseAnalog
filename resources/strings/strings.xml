@@ -2,16 +2,6 @@
     <string id="AppName">Moon Phase Astro</string>
 
     <!-- Appearance -->
-    <string id="SetHandStyle">Hand style</string>
-    <string id="HandDauphine">Dauphine</string>
-    <string id="HandBaton">Baton</string>
-    <string id="HandSyringe">Syringe</string>
-    <string id="HandSkeleton">Skeleton</string>
-    <string id="HandBreguet">Breguet</string>
-    <string id="HandAlpha">Alpha</string>
-    <string id="HandSword">Sword</string>
-    <string id="HandLoop">Loop</string>
-
     <string id="SetCometMode">Comet trail</string>
     <string id="SetCometModePrompt">How the trail behind the second hand is coloured.</string>
     <string id="CometClassic">Classic (one hue)</string>

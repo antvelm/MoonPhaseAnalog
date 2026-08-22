@@ -2,19 +2,6 @@
 
     <!-- ===== Appearance ===== -->
 
-    <setting propertyKey="@Properties.HandStyle" title="@Strings.SetHandStyle">
-        <settingConfig type="list">
-            <listEntry value="0">@Strings.HandDauphine</listEntry>
-            <listEntry value="1">@Strings.HandBaton</listEntry>
-            <listEntry value="2">@Strings.HandSyringe</listEntry>
-            <listEntry value="3">@Strings.HandSkeleton</listEntry>
-            <listEntry value="4">@Strings.HandBreguet</listEntry>
-            <listEntry value="5">@Strings.HandAlpha</listEntry>
-            <listEntry value="6">@Strings.HandSword</listEntry>
-            <listEntry value="7">@Strings.HandLoop</listEntry>
-        </settingConfig>
-    </setting>
-
     <setting propertyKey="@Properties.CometMode" title="@Strings.SetCometMode"
              prompt="@Strings.SetCometModePrompt">
         <settingConfig type="list">

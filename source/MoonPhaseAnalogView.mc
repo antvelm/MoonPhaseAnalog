@@ -300,10 +300,9 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         var hourAngle = ((hour + min / 60.0) / 12.0) * 2.0 * Math.PI;
         var minAngle  = ((min + sec / 60.0) / 60.0) * 2.0 * Math.PI;
-        var style = Settings.handStyle;
 
-        Hands.draw(dc, style, hourAngle, _radius * 0.48, scaled(10), scaled(16), awake);
-        Hands.draw(dc, style, minAngle, _radius * 0.84, scaled(7), scaled(18), awake);
+        Hands.draw(dc, hourAngle, _radius * 0.48, scaled(11), scaled(6), scaled(16), awake);
+        Hands.draw(dc, minAngle, _radius * 0.84, scaled(8), scaled(4), scaled(18), awake);
 
         // Second hand: hairline needle in the current hue (awake only).
         if (awake) {

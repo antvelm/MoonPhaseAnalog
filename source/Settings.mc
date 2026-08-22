@@ -41,7 +41,6 @@ module Settings {
     const ECLIPSE_SRC_TABLE   = 0;
     const ECLIPSE_SRC_COMPUTE = 1;
 
-    var handStyle;
     var cometMode;
     var cometOnFiveSec;
     var showOrbitRing;
@@ -71,7 +70,6 @@ module Settings {
     function load() {
         if (_loaded) { return; }
 
-        handStyle           = numberOr("HandStyle", 0, 0, 7);
         cometMode           = numberOr("CometMode", 0, 0, 2);
         cometOnFiveSec      = boolOr("CometOnFiveSec", false);
         showOrbitRing       = boolOr("ShowOrbitRing", false);

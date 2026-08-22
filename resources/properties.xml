@@ -9,11 +9,6 @@
 
     <!-- Appearance -->
 
-    <!-- Shape of the hour and minute hands, drawn in MoonPhaseAnalogView.
-         0 Dauphine, 1 Baton, 2 Syringe, 3 Skeleton, 4 Breguet, 5 Alpha, 6 Sword,
-         7 Loop. -->
-    <property id="HandStyle" type="number">0</property>
-
     <!-- How the second-track comet is coloured (Dial.cometColors).
          0 Classic: one hue for the whole 8-dot tail, fading behind the head.
          1 Spectrum trail: the tail runs through the spectrum as it moves.
