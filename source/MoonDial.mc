@@ -43,12 +43,82 @@ module MoonDial {
     // with a hairline crescent drawn round it.
     const RIM_FADE = 0.06;
 
+    // --- Frame cache --------------------------------------------------------
+    //
+    // The scanline shading below costs about 400ms on a Venu 3, and onUpdate
+    // runs once a second. It does not need to. The disc is a pure function of
+    // the phase, the eclipse and whether the screen is awake -- nothing in
+    // here reads the clock or the rainbow wave -- and the phase barely moves.
+    // The terminator sits at w*cos(2*PI*frac), so it travels at most 2*PI*mr
+    // pixels per lunation, about 214px on this dial: one pixel every 3.3
+    // hours. Redrawing it 3,600 times an hour was buying nothing.
+    //
+    // So the disc is rendered into a bitmap and blitted, and only re-rendered
+    // when the phase crosses into a new bucket. At PHASE_STEPS buckets that is
+    // under a pixel of terminator movement each, and roughly nine re-renders a
+    // day instead of 86,400.
+    //
+    // Eclipses stay uncached on purpose. They are rare, they are the one time
+    // the disc really does change minute to minute (the magnitude moves
+    // through the event), and the solar corona reaches out to 1.55*mr, which
+    // would size the bitmap for a case that almost never runs. Paying the full
+    // render cost for a few hours a year is the right trade.
+
+    const PHASE_STEPS = 256;
+
+    var _cache = null;      // the plain disc, ready to blit
+    var _cacheKey = null;   // [bucket, awake, mr] it was rendered for
+    var _cacheC = 0;        // where the disc centre sits inside the bitmap
+
     (:typecheck(false))
     function draw(dc, mx, my, mr, awake, frac, eclipse, weak) {
-        if (eclipse != null && !eclipse[:lunar]) {
-            drawSolar(dc, mx, my, mr, eclipse, weak);
+        if (eclipse != null) {
+            if (eclipse[:lunar]) {
+                render(dc, mx, my, mr, awake, frac, eclipse, weak);
+            } else {
+                drawSolar(dc, mx, my, mr, eclipse, weak);
+            }
             return;
         }
+
+        var bucket = (frac * PHASE_STEPS).toNumber();
+        if (_cache == null || _cacheKey[0] != bucket
+                || _cacheKey[1] != awake || _cacheKey[2] != mr) {
+            rebuild(mr, awake, bucket);
+            _cacheKey = [bucket, awake, mr];
+        }
+
+        dc.drawBitmap(mx - _cacheC, my - _cacheC, _cache);
+    }
+
+    // Render one bucket's disc into a fresh bitmap. The phase used is the
+    // bucket's midpoint rather than the frac that happened to trigger the
+    // rebuild, so the same bucket always produces the same image.
+    (:typecheck(false))
+    function rebuild(mr, awake, bucket) {
+        var size = (2 * mr + 3).toNumber();
+        _cacheC = size / 2;
+
+        // Drop the old bitmap before allocating the new one: holding both at
+        // once would double the peak heap for no reason.
+        _cache = null;
+
+        var ref = Gfx.createBufferedBitmap({ :width => size, :height => size });
+        _cache = ref.get();
+
+        var bdc = _cache.getDc();
+        // Everything outside the disc has to stay transparent -- the starfield
+        // shows through it.
+        bdc.setColor(Gfx.COLOR_TRANSPARENT, Gfx.COLOR_TRANSPARENT);
+        bdc.clear();
+        if (bdc has :setAntiAlias) { bdc.setAntiAlias(true); }
+
+        render(bdc, _cacheC, _cacheC, mr, awake,
+               (bucket + 0.5) / PHASE_STEPS, null, false);
+    }
+
+    (:typecheck(false))
+    function render(dc, mx, my, mr, awake, frac, eclipse, weak) {
 
         var lunarEclipse = (eclipse != null);
 

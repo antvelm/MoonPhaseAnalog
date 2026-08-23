@@ -10,10 +10,18 @@
 #   .\build.ps1 -Debug       # debug builds (faster, larger, for the simulator)
 #   .\build.ps1 -UnitTest    # debug build with the (:test) functions compiled in;
 #                            #   run them with tools\run-tests.ps1
+#   .\build.ps1 -Perf        # compile the on-screen frame-time / heap overlay
+#                            #   in (source\Perf.mc). Never ship one of these.
+#
+# Every build prints its static memory footprint. A Venu 3 watch face gets
+# 128 kB for code, data and runtime heap combined, so whatever the static
+# figure leaves over is all the moon bitmap, the buffered dial and the star
+# arrays have to live in.
 
 param(
     [switch]$Debug,
-    [switch]$UnitTest
+    [switch]$UnitTest,
+    [switch]$Perf
 )
 
 # The test functions are only emitted into a debug build.
@@ -69,6 +77,15 @@ if (-not (Test-Path $key)) { throw "Missing developer_key.der. See HANDOFF.md to
 New-Item -ItemType Directory -Force -Path bin | Out-Null
 
 $modeLabel = if ($UnitTest) { "unit-test" } elseif ($Debug) { "debug" } else { "release" }
+if ($Perf) { $modeLabel += "+perf" }
+
+# perf.jungle overrides monkey.jungle's annotation exclusion, swapping the
+# overlay's empty stubs for its real implementation.
+$jungles = if ($Perf) { "monkey.jungle;perf.jungle" } else { "monkey.jungle" }
+
+# What a watch face gets on both Venu 3 sizes, from the SDK's
+# Devices\venu3\compiler.json. Code, data and runtime heap all come out of it.
+$memoryLimit = 131072
 
 foreach ($device in @("venu3", "venu3s")) {
     $out = "bin\MoonPhaseAstro-$device.prg"
@@ -80,13 +97,35 @@ foreach ($device in @("venu3", "venu3s")) {
     # file and rejects -f.
     $javaArgs = @(
         "-cp", $jar, "com.garmin.monkeybrains.Monkeybrains",
-        "-f", "monkey.jungle", "-o", $out, "-y", $key, "-d", $device, "-w"
+        "-f", $jungles, "-o", $out, "-y", $key, "-d", $device, "-w",
+        "--build-stats", "0"
     )
     if (-not $Debug) { $javaArgs += "-r" }
     if ($UnitTest) { $javaArgs += "--unit-test" }
-    & $java @javaArgs 2>&1 |
-        Select-String -Pattern "BUILD|ERROR|WARNING"
+    # Capture rather than pipe straight through, so the build stats can be
+    # totalled below. Windows PowerShell wraps a native command's stderr lines
+    # in ErrorRecords, which the script-wide "Stop" preference would turn into
+    # a terminating error the moment they land in a variable -- so relax the
+    # preference across the call and stringify what comes back.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $output = & $java @javaArgs 2>&1 | ForEach-Object { "$_" }
+    $ErrorActionPreference = $prevEap
+    $output | Select-String -Pattern "BUILD SUCCESSFUL|BUILD FAILED|ERROR|WARNING"
     if (-not (Test-Path $out)) { throw "Build failed for $device" }
+
+    # The stats block reports data and code separately, in that order, each on
+    # its own "Foreground:" line. Their sum is what the app costs before it has
+    # allocated anything at all.
+    $bytes = @([regex]::Matches(($output -join "`n"), "Foreground:\s+(\d+)") |
+        ForEach-Object { [int]$_.Groups[1].Value })
+    if ($bytes.Count -ge 2) {
+        $static = $bytes[0] + $bytes[1]
+        $pct = [math]::Round(100.0 * $static / $memoryLimit, 1)
+        Write-Host ("  data {0:N0} + code {1:N0} = {2:N0} bytes static, {3}% of the {4:N0} byte limit" -f `
+            $bytes[0], $bytes[1], $static, $pct, $memoryLimit)
+        Write-Host ("  {0:N0} bytes left for the runtime heap" -f ($memoryLimit - $static))
+    }
 }
 
 Write-Host "`nDone. Sideload the .prg matching your watch:"

@@ -100,8 +100,10 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
     (:typecheck(false))
     function onUpdate(dc) {
+        Perf.begin();
         Settings.load();
         refreshCaches();
+        Perf.mark();
 
         var clock = System.getClockTime();
         var now = Time.now().value();
@@ -111,6 +113,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         // phase the disc draws. Taken once here, off the astro clock, so a debug
         // time offset moves the sky and the moon together.
         var frac = MoonPhase.fractionAt(astroTime(now));
+        Perf.mark();
 
         // Burn-in shift: nudge the whole composition on a slow cycle in
         // always-on mode so no pixel is lit continuously.
@@ -125,10 +128,12 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         RainbowWave.setup(_cx + _ox, _cy + _oy, _radius);
         RainbowWave.update(now, clock, awake);
+        Perf.mark();
 
         dc.setColor(Theme.BG, Theme.BG);
         dc.clear();
         if (dc has :setAntiAlias) { dc.setAntiAlias(true); }
+        Perf.mark();
 
         // Only the origin moves per frame; the cached track, labels and star
         // field were built once in onLayout.
@@ -139,15 +144,23 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
             Dial.drawBackground(dc, clock.sec, frac);
             if (Settings.showOrbitRing) { Dial.drawOrbitRing(dc); }
         }
+        Perf.mark();
         Dial.drawSecondTrack(dc, clock.sec, awake);
+        Perf.mark();
         Dial.drawHourMarks(dc, awake);
+        Perf.mark();
 
         drawDay(dc, awake);
         drawHeartRate(dc, awake);
+        Perf.mark();
         drawMoon(dc, awake, now, frac);
+        Perf.mark();
         //drawRedMoonSprite(dc);
 
         drawHands(dc, clock, awake);
+        Perf.mark();
+
+        Perf.draw(dc);
     }
 
     // --- Complications ------------------------------------------------------

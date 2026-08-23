@@ -11,9 +11,16 @@
 # Usage:
 #   .\run-simulator.ps1            # simulate on venu3
 #   .\run-simulator.ps1 venu3s     # simulate on venu3s
+#   .\run-simulator.ps1 -Perf      # with the frame-time / heap overlay from
+#                                  #   source\Perf.mc drawn on the dial
+#
+# With -Perf, read the overlay alongside the simulator's own File > View
+# Memory window: the overlay gives you per-frame cost and live heap, the
+# memory viewer gives you the peak and the per-class breakdown behind it.
 
 param(
-    [string]$Device = "venu3"
+    [string]$Device = "venu3",
+    [switch]$Perf
 )
 
 $ErrorActionPreference = "Stop"
@@ -74,9 +81,14 @@ Write-Host "Using Java: $java"
 # Build a fresh debug .prg for the simulator.
 $prg = "bin\MoonPhaseAstro-$Device.prg"
 New-Item -ItemType Directory -Force -Path bin | Out-Null
-Write-Host "Building $Device (debug) ..."
+# perf.jungle overrides monkey.jungle's annotation exclusion, swapping the
+# overlay's empty stubs for its real implementation.
+$jungles = if ($Perf) { "monkey.jungle;perf.jungle" } else { "monkey.jungle" }
+
+$modeLabel = if ($Perf) { "debug+perf" } else { "debug" }
+Write-Host "Building $Device ($modeLabel) ..."
 & $java -cp $jar com.garmin.monkeybrains.Monkeybrains `
-    -f monkey.jungle -o $prg -y developer_key.der -d $Device -w 2>&1 |
+    -f $jungles -o $prg -y developer_key.der -d $Device -w 2>&1 |
     Select-String -Pattern "BUILD|ERROR|WARNING"
 if (-not (Test-Path $prg)) { throw "Build failed." }
 

@@ -114,7 +114,8 @@
 
     <!-- Hours between waves (1-24). The wave fires at the first draw at or
          after each slot, so with the watch asleep it lands on the next wrist
-         raise. 24 gives the old once-a-day behaviour, at WaveHour. -->
+         raise; a wave cut short by the screen sleeping is replayed on the raise
+         after that. 24 gives the old once-a-day behaviour, at WaveHour. -->
     <property id="WaveIntervalHours" type="number">3</property>
 
     <!-- Eclipses -->

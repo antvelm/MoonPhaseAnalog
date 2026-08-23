@@ -432,6 +432,7 @@ module Dial {
     function buildStars() {
         var n = Settings.starCount;
         _stars = new [n * 4];
+        _starColors = null;
         if (n <= 0) { return; }
 
         var ca = Math.cos(MW_ANGLE);
@@ -560,6 +561,21 @@ module Dial {
         // washed out rather than merely sparse.
         var wash = 1.0 - MOON_WASH * illum;
 
+        // Everything above depends only on the moon's illumination, which
+        // moves over days, so the finished colour of every star is cached and
+        // rebuilt a handful of times a day rather than recomputed for each of
+        // several hundred stars, every second. See STAR_COLOUR_CACHE.
+        var bucket = (illum * ILLUM_STEPS).toNumber();
+        if (_starColors == null || _starColorKey[0] != bucket
+                || _starColorKey[1] != n) {
+            buildStarColors(n, floorMag, span, wash);
+            _starColorKey = [bucket, n];
+        }
+
+        // A crossing wave recolours by position and changes every frame, so
+        // there is nothing to cache for the few seconds it is up.
+        var waveOn = RainbowWave.isActive();
+
         // These sprites are one to three pixels across; there is nothing here
         // for antialiasing to smooth, and switching it off makes a hundred-odd
         // tiny fills markedly cheaper. Restored before anything else draws.
@@ -567,24 +583,70 @@ module Dial {
         if (aa) { dc.setAntiAlias(false); }
 
         for (var i = 0; i < n; i += 1) {
-            var mag = _stars[i * 4 + 3];
-            if (mag <= floorMag) { continue; }
-
-            // Fade in from black as a star clears the cutoff, so stars dissolve
-            // over several nights instead of popping in and out.
-            var level = wash * (STAR_LEVEL_MIN
-                      + (1.0 - STAR_LEVEL_MIN) * ((mag - floorMag) / span));
+            // null is how the cache records a star under the cutoff, so the
+            // magnitude test is paid once per rebuild rather than per frame.
+            var color = _starColors[i];
+            if (color == null) { continue; }
 
             var tier = _stars[i * 4 + 2];
-            var base = (tier >= 2) ? Theme.STAR_BRIGHT
-                     : (tier == 1) ? Theme.STAR
-                     : Theme.STAR_DIM;
+            var x = _stars[i * 4] + _ox;
+            var y = _stars[i * 4 + 1] + _oy;
 
-            drawStar(dc, _stars[i * 4] + _ox, _stars[i * 4 + 1] + _oy,
-                tier, level, sec, i, base);
+            if (tier == 3 || waveOn) {
+                // Tier 3 pulses on the second; neither it nor a live wave
+                // survives a cache, so these take the long way round.
+                drawStar(dc, x, y, tier, starLevel(i, floorMag, span, wash),
+                    sec, i, starBase(tier));
+            } else {
+                drawStarShape(dc, x, y, tier, color);
+            }
         }
 
         if (aa) { dc.setAntiAlias(true); }
+    }
+
+    // --- STAR_COLOUR_CACHE ---------------------------------------------------
+    //
+    // The moon subdial caches its whole rendering into a bitmap; the starfield
+    // cannot. A background bitmap would have to be the full 454x454, which
+    // does not fit in the 128kB a watch face gets at any bit depth worth
+    // having. So the saving comes from the per-star work instead: the fade
+    // level and the Theme.dim that turns it into a colour are the expensive
+    // part, and both are functions of the illumination alone.
+    //
+    // ILLUM_STEPS buckets across a lunation works out at a few rebuilds a day.
+    const ILLUM_STEPS = 64;
+
+    var _starColors = null;
+    var _starColorKey = null;   // [illumination bucket, star count]
+
+    // Fade in from black as a star clears the cutoff, so stars dissolve over
+    // several nights instead of popping in and out.
+    (:typecheck(false))
+    function starLevel(i, floorMag, span, wash) {
+        var mag = _stars[i * 4 + 3];
+        return wash * (STAR_LEVEL_MIN
+             + (1.0 - STAR_LEVEL_MIN) * ((mag - floorMag) / span));
+    }
+
+    (:typecheck(false))
+    function starBase(tier) {
+        return (tier >= 2) ? Theme.STAR_BRIGHT
+             : (tier == 1) ? Theme.STAR
+             : Theme.STAR_DIM;
+    }
+
+    (:typecheck(false))
+    function buildStarColors(n, floorMag, span, wash) {
+        _starColors = new [n];
+        for (var i = 0; i < n; i += 1) {
+            if (_stars[i * 4 + 3] <= floorMag) {
+                _starColors[i] = null;      // under the cutoff: not drawn
+                continue;
+            }
+            _starColors[i] = Theme.dim(starBase(_stars[i * 4 + 2]),
+                starLevel(i, floorMag, span, wash));
+        }
     }
 
     // Three sizes of sprite so the field has depth instead of reading as a
@@ -606,7 +668,14 @@ module Dial {
             b = b * (0.72 + 0.28 * Math.sin(phase * 2.0 * Math.PI));
         }
 
-        var color = RainbowWave.tint(Theme.dim(base, b), x, y);
+        drawStarShape(dc, x, y, tier, RainbowWave.tint(Theme.dim(base, b), x, y));
+    }
+
+    // The sprite itself, given a finished colour. Split out so the starfield's
+    // cache can skip straight to it; drawStar is still the way in for anything
+    // that has to derive the colour first.
+    (:typecheck(false))
+    function drawStarShape(dc, x, y, tier, color) {
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
 
         if (tier == 0) {
