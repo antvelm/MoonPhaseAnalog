@@ -17,8 +17,11 @@
          both round to the same value on venu3 (r=227) and venu3s (r=195), so
          one sprite per tier serves both watches.
 
-         There is deliberately no 3x3 sprite for tier 0 - see
-         Dial.drawStarSprite for why blitting it is a loss. -->
+         Tier 0's 3x3 is the same two-stroke cross the code used to draw by
+         hand. It was left out on the strength of a benchmark that turned out
+         to have been run with anti-aliasing off; on a Venu 3 a blit and a
+         stroke cost the same, so one call beats two. See docs/track-perf.md. -->
+    <bitmap id="Star3" filename="star_3x3.png" automaticPalette="false"/>
     <bitmap id="Star5" filename="star_5x5.png" automaticPalette="false"/>
     <bitmap id="Star7" filename="star_7x7.png" automaticPalette="false"/>
 </drawables>

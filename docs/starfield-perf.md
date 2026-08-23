@@ -168,6 +168,13 @@ Sprite sizes are fixed pixels rather than `scaled()`: `scaled(2)` and
 `scaled(3)` round to the same value on venu3 (r=227) and venu3s (r=195), so one
 sprite per tier serves both watches.
 
+**Measured with anti-aliasing off, which the frame is not.** `onUpdate` calls
+`setAntiAlias(true)` right after `clear`, and re-running these arms in that
+state changes the answer: a 3 px `drawLine` goes from 12.7 µs to 85.4 µs and a
+`fillCircle` r=2 from 124 µs to 393 µs. The *ratio* above survives — a circle is
+still the expensive one — but the tier 0 decision below does not. See
+[track-perf.md](track-perf.md), "The bigger fish this turned up".
+
 **These are simulator numbers and want confirming on the watch.** The ordering
 is stark enough (20×) that it is unlikely to invert, but the ratios will not
 transfer exactly — the whole rest of this document was measured on hardware and
@@ -176,11 +183,14 @@ p3 / t3 / t5 / t7` lines the overlay adds.
 
 ### The same lever, unpulled: the second track
 
-`drawSecondTrack` draws up to **60 `fillCircle`s a frame** (`Dial.mc:287`), and
-`drawOrbitRing` another 24 (`Dial.mc:445`). At 126 µs each that is the `track`
-section, which the simulator overlay puts at 15–31 ms — **larger than the
-starfield ever was**. It is the biggest remaining item on the frame and the fix
-is the one proven above. Untouched so far.
+`drawSecondTrack` draws ~48 `fillCircle`s a frame (`Dial.mc:287`), and
+`drawOrbitRing` another 72 (`Dial.mc:445`) when it is on — it is off by
+default. On device that is the `track` section at **~15 ms**, so the same fix
+is worth single-digit milliseconds, not the frame. See `docs/track-perf.md`.
+
+(An earlier draft of this section claimed 15–31 ms and "larger than the
+starfield ever was". That came from the simulator overlay, whose section
+timings are quantised to 15.6 ms and mean nothing — see the gotcha below.)
 
 ---
 
@@ -234,6 +244,16 @@ one frame will occasionally spike.
 ---
 
 ## Gotchas
+
+**The simulator cannot time a section of `onUpdate`.** `System.getTimer()`
+there resolves to ~15.6 ms (the Windows tick), so every section reads as 0, 15,
+16, 31 or 32 and nothing else — whichever ticks happened to land inside it.
+Which sections even appear changes at random between frames. Four consecutive
+new-moon samples read `clear 16 / track 16 / marks 15`, `clear 15 / track 32 /
+cplx 15`, `bg 15 / track 16 / cplx 16`, `bg 15 / track 31`. **Take section
+timings on the watch only.** To measure anything in the simulator, batch it:
+loop the operation a few thousand times and time the batch, which is what the
+per-primitive table above did.
 
 **`loadResource` hands back a `ResourceReference`, not the bitmap.** Bitmaps and
 fonts load into the graphics pool, which "dynamically caches, unloads and

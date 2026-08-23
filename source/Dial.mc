@@ -104,6 +104,7 @@ module Dial {
     // drawBitmap2 takes. The dictionary is reused and its :tintColor rewritten
     // per star rather than allocated per call - a few hundred short-lived
     // dictionaries a second is churn the field does not need.
+    var _star3 = null;          // tier 0
     var _star5 = null;          // tier 1
     var _star7 = null;          // tier 2 and 3
     var _tintOpt = null;
@@ -129,6 +130,7 @@ module Dial {
         // and MoonDial.mc:107.
         _canTint = (dc has :drawBitmap2);
         if (_canTint) {
+            _star3 = lockedBitmap(Rez.Drawables.Star3);
             _star5 = lockedBitmap(Rez.Drawables.Star5);
             _star7 = lockedBitmap(Rez.Drawables.Star7);
             _tintOpt = { :tintColor => Theme.STAR };
@@ -274,6 +276,11 @@ module Dial {
         var rMajor = scaled(DOT_MAJOR);
         var rMinor = scaled(DOT_MINOR);
 
+        // The colour currently on the Dc, so a run of same-coloured dots pays
+        // for one setColor rather than one each. Null means "unknown": nothing
+        // in this module can assume what the previous section left behind.
+        var last = null;
+
         for (var i = 0; i < 60; i += 1) {
             var onFive = (i % 5 == 0);
             var hasNumeral = onFive && showNumerals;
@@ -300,7 +307,18 @@ module Dial {
 
             var r = (onFive && !hasNumeral) ? rMajor : rMinor;
             if (!hasNumeral || lit != null) {
-                dc.setColor(RainbowWave.tint(color, x, y), Gfx.COLOR_TRANSPARENT);
+                // Most of the ring is one colour: everything the comet is not
+                // lighting is TICK_DIM, and in low power - comet off, numerals
+                // hidden - that is all sixty positions. Setting the colour only
+                // where it actually changes takes the ring from sixty setColor
+                // calls to one, and from forty-eight to a dozen or so awake.
+                // The wave is the exception: it gives every position a colour
+                // of its own, and there the check simply never fires.
+                var want = RainbowWave.tint(color, x, y);
+                if (want != last) {
+                    dc.setColor(want, Gfx.COLOR_TRANSPARENT);
+                    last = want;
+                }
                 dc.fillCircle(x, y, r);
             }
 
@@ -844,11 +862,34 @@ module Dial {
             // be counted. Five pixels is still unmistakably the smallest
             // sprite - tier 1 is a longer cross with a filled centre.
             //
-            // Both strokes earn their cost. A single three-pixel dash is half
-            // the price - and at ~6us a stroke this tier's 78% share of the
-            // field is the only place halving anything would show - but a
-            // field of dashes reads as scratches rather than stars, whether
-            // they all lie the same way or alternate. Tried and rejected.
+            // The cross is now one blit rather than two strokes, which is the
+            // single largest saving on the frame: this tier is 78% of the
+            // field and was 312 of its 356 draw calls.
+            //
+            // It was left as strokes for a long time on the strength of a
+            // benchmark reading ~6us a stroke against ~39us a blit. That arm
+            // had been run with anti-aliasing off, and onUpdate turns it on
+            // for the whole frame; re-timed in the state the field actually
+            // draws in, a stroke is 85us. Measured again on the watch itself,
+            // a Venu 3 charges per Dc call and barely distinguishes the
+            // primitives at all - 3px stroke 1.00, fillCircle 1.16, blit 1.17
+            // - so two strokes cost 2.00 against the blit's 1.17. See
+            // docs/track-perf.md.
+            //
+            // A single three-pixel dash would be cheaper still, and remains
+            // rejected: a field of dashes reads as scratches rather than
+            // stars, whether they all lie the same way or alternate.
+            //
+            // The sprite is the same five lit pixels the strokes drew, so this
+            // is a cost change and not a look change. It is opaque black
+            // outside the cross, so it is only safe where nothing is
+            // underneath - hence the same `sprite` flag the bright tiers use,
+            // false from drawZodiac, which lays its joining lines down first.
+            if (sprite && _canTint) {
+                _tintOpt[:tintColor] = color;
+                dc.drawBitmap2(x - 1, y - 1, _star3, _tintOpt);
+                return;
+            }
             dc.drawLine(x - 1, y, x + 1, y);
             dc.drawLine(x, y - 1, x, y + 1);
             return;

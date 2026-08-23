@@ -160,6 +160,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         drawHands(dc, clock, awake);
         Perf.mark();
 
+        TrackBench.run(dc);
         Perf.draw(dc);
     }
 
