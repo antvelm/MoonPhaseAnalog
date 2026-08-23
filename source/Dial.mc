@@ -1,6 +1,7 @@
 using Toybox.Graphics as Gfx;
 using Toybox.Math;
 using Toybox.Lang;
+using Toybox.Application;
 
 // Everything on the dial except the hands, the moon and the complications:
 // the second track, the hour numerals, the background ornament and the comet.
@@ -99,6 +100,15 @@ module Dial {
     var _zodiacSign = -1;
     var _zodiacPts = null;      // flat: x, y, tier
 
+    // Pre-drawn sprites for the bright star tiers, and the options dictionary
+    // drawBitmap2 takes. The dictionary is reused and its :tintColor rewritten
+    // per star rather than allocated per call - a few hundred short-lived
+    // dictionaries a second is churn the field does not need.
+    var _star5 = null;          // tier 1
+    var _star7 = null;          // tier 2 and 3
+    var _tintOpt = null;
+    var _canTint = false;
+
     (:typecheck(false))
     function setup(dc, cx, cy, radius, scale) {
         _cx = cx;
@@ -106,6 +116,23 @@ module Dial {
         _radius = radius;
         _scale = scale;
         _canRotate = (dc has :drawBitmap2);
+
+        // Loaded once here rather than lazily on the draw path. They live in
+        // the graphics pool, not the app heap, so they cost nothing against
+        // the 128kB budget the field's arrays come out of.
+        //
+        // Hold the resource, not the ResourceReference. The pool unloads and
+        // reloads references behind your back as memory moves, so a bare
+        // reference makes every drawBitmap2 pay a pool resolve - invisible on
+        // the simulator, expensive on the watch. get() locks it, which for two
+        // sprites of <=7x7 costs nothing. Same pattern as renderLabel below
+        // and MoonDial.mc:107.
+        _canTint = (dc has :drawBitmap2);
+        if (_canTint) {
+            _star5 = lockedBitmap(Rez.Drawables.Star5);
+            _star7 = lockedBitmap(Rez.Drawables.Star7);
+            _tintOpt = { :tintColor => Theme.STAR };
+        }
 
         buildTrack();
         buildLabels(dc);
@@ -122,6 +149,16 @@ module Dial {
 
     function scaled(v) {
         return (v * _scale + 0.5).toNumber();
+    }
+
+    // A bitmap resource locked into the graphics pool. loadResource hands back
+    // a ResourceReference on this API level; keeping only the reference lets
+    // the pool purge and reload the bitmap underneath you. The has-check is
+    // for the case where the resource comes back directly.
+    (:typecheck(false))
+    function lockedBitmap(res) {
+        var ref = Application.loadResource(res);
+        return (ref has :get) ? ref.get() : ref;
     }
 
     // --- Second track geometry ----------------------------------------------
@@ -456,6 +493,7 @@ module Dial {
         var n = Settings.starCount;
         _stars = new [n * 4];
         _starColors = null;
+        _starOrder = null;
         if (n <= 0) { return; }
 
         var ca = Math.cos(MW_ANGLE);
@@ -594,6 +632,7 @@ module Dial {
             buildStarColors(n, floorMag, span, wash);
             _starColorKey = [bucket, n];
         }
+        if (_starOrder == null || _starOrder.size() == 0) { return; }
 
         // A crossing wave recolours by position and changes every frame, so
         // there is nothing to cache for the few seconds it is up.
@@ -605,24 +644,45 @@ module Dial {
         var aa = (dc has :setAntiAlias);
         if (aa) { dc.setAntiAlias(false); }
 
-        for (var i = 0; i < n; i += 1) {
-            // null is how the cache records a star under the cutoff, so the
-            // magnitude test is paid once per rebuild rather than per frame.
-            var color = _starColors[i];
-            if (color == null) { continue; }
+        // Every sprite strokes at one pixel, so the pen is set for the whole
+        // field instead of once per star.
+        dc.setPenWidth(1);
 
+        // _starOrder holds only the stars above the cutoff, grouped by colour,
+        // so the loop neither tests the cutoff nor repeats a setColor within a
+        // group. cur is the colour currently on the Dc; -1 is never a colour.
+        var order = _starOrder;
+        var m = order.size();
+        var cur = -1;
+
+        for (var k = 0; k < m; k += 1) {
+            var i = order[k];
             var tier = _stars[i * 4 + 2];
             var x = _stars[i * 4] + _ox;
             var y = _stars[i * 4 + 1] + _oy;
 
             if (tier == 3 || waveOn) {
                 // Tier 3 pulses on the second; neither it nor a live wave
-                // survives a cache, so these take the long way round.
+                // survives a cache, so these take the long way round - and
+                // they leave a colour of their own behind.
                 drawStar(dc, x, y, tier, starLevel(i, floorMag, span, wash),
-                    sec, i, starBase(tier));
-            } else {
-                drawStarShape(dc, x, y, tier, color);
+                    sec, i, starBase(tier), true);
+                cur = -1;
+                continue;
             }
+
+            var color = _starColors[i];
+            if (color != cur) {
+                dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+                cur = color;
+            }
+            drawStarSprite(dc, x, y, tier, color, true);
+
+            // A sparkle used to dim the Dc for its diagonals without restoring
+            // it, which broke the colour run here. Now that the diagonals are
+            // baked into the tinted sprite nothing touches the Dc colour, so
+            // the run carries on - but the stroke fallback still does dim it.
+            if (tier >= 2 && !_canTint) { cur = -1; }
         }
 
         if (aa) { dc.setAntiAlias(true); }
@@ -640,8 +700,20 @@ module Dial {
     // ILLUM_STEPS buckets across a lunation works out at a few rebuilds a day.
     const ILLUM_STEPS = 64;
 
+    // Brightness steps the fade is quantised to before it becomes a colour.
+    // starLevel is continuous in magnitude, so ungrouped every star ends up
+    // with a colour of its own and the draw loop pays a setColor for each one.
+    // Ten steps is indistinguishable across sprites one to five pixels wide,
+    // and it collapses a couple of hundred colour changes a frame into a
+    // couple of dozen. See _starOrder.
+    const LEVEL_STEPS = 10;
+
     var _starColors = null;
     var _starColorKey = null;   // [illumination bucket, star count]
+
+    // Indices of the stars above the cutoff, grouped so equal colours are
+    // adjacent. Built with the colour cache, walked instead of the raw array.
+    var _starOrder = null;
 
     // Fade in from black as a star clears the cutoff, so stars dissolve over
     // several nights instead of popping in and out.
@@ -659,28 +731,75 @@ module Dial {
              : Theme.STAR_DIM;
     }
 
+    // Colours for the whole field, plus the order to draw them in. Runs on an
+    // illumination bucket change, a few times a day, never on the draw path.
+    //
+    // The order is a counting sort into (tier, brightness step) buckets, so
+    // the draw loop walks the field colour by colour and sets each colour
+    // once. Tier is part of the key because it picks the base colour; keying
+    // it first also puts the twinkling tier last, where its per-star recolour
+    // cannot split a run.
     (:typecheck(false))
     function buildStarColors(n, floorMag, span, wash) {
         _starColors = new [n];
+
+        var buckets = 4 * LEVEL_STEPS;
+        var counts = new [buckets];
+        for (var b = 0; b < buckets; b += 1) { counts[b] = 0; }
+
+        var keys = new [n];
+        var visible = 0;
+
         for (var i = 0; i < n; i += 1) {
-            if (_stars[i * 4 + 3] <= floorMag) {
+            var mag = _stars[i * 4 + 3];
+            if (mag <= floorMag) {
                 _starColors[i] = null;      // under the cutoff: not drawn
+                keys[i] = -1;
                 continue;
             }
-            _starColors[i] = Theme.dim(starBase(_stars[i * 4 + 2]),
-                starLevel(i, floorMag, span, wash));
+
+            var step = (((mag - floorMag) / span) * LEVEL_STEPS).toNumber();
+            if (step < 0) { step = 0; }
+            if (step > LEVEL_STEPS - 1) { step = LEVEL_STEPS - 1; }
+
+            // The step's midpoint, so quantising does not bias the field dark.
+            var tier = _stars[i * 4 + 2];
+            var level = wash * (STAR_LEVEL_MIN + (1.0 - STAR_LEVEL_MIN)
+                      * ((step + 0.5) / LEVEL_STEPS));
+            _starColors[i] = Theme.dim(starBase(tier), level);
+
+            var key = tier * LEVEL_STEPS + step;
+            keys[i] = key;
+            counts[key] += 1;
+            visible += 1;
+        }
+
+        var offsets = new [buckets];
+        var run = 0;
+        for (var b2 = 0; b2 < buckets; b2 += 1) {
+            offsets[b2] = run;
+            run += counts[b2];
+        }
+
+        _starOrder = new [visible];
+        for (var j = 0; j < n; j += 1) {
+            var k = keys[j];
+            if (k < 0) { continue; }
+            _starOrder[offsets[k]] = j;
+            offsets[k] += 1;
         }
     }
 
     // Three sizes of sprite so the field has depth instead of reading as a
-    // uniform scatter of pixels. Tiers: 0 a single pixel, 1 a small cross, 2 a
-    // four-point sparkle, 3 the same sparkle but twinkling.
+    // uniform scatter of pixels. Tiers: 0 a three-pixel cross, 1 a larger cross
+    // with a centre dot, 2 a four-point sparkle, 3 the same sparkle but
+    // twinkling.
     //
     // base is passed in rather than derived from the tier, because the two
     // callers want different palettes: the starfield fades its faintest stars
     // to STAR_DIM, while the zodiac keeps every constellation star legible.
     (:typecheck(false))
-    function drawStar(dc, x, y, tier, bright, sec, index, base) {
+    function drawStar(dc, x, y, tier, bright, sec, index, base, sprite) {
         var b = bright;
         // Only tier 3 pulses, on the free 1 Hz redraw, offset per star so they
         // are not in lockstep. Gating it to its own tier keeps the number of
@@ -691,26 +810,87 @@ module Dial {
             b = b * (0.72 + 0.28 * Math.sin(phase * 2.0 * Math.PI));
         }
 
-        drawStarShape(dc, x, y, tier, RainbowWave.tint(Theme.dim(base, b), x, y));
+        drawStarShape(dc, x, y, tier, RainbowWave.tint(Theme.dim(base, b), x, y),
+            sprite);
     }
 
     // The sprite itself, given a finished colour. Split out so the starfield's
     // cache can skip straight to it; drawStar is still the way in for anything
     // that has to derive the colour first.
     (:typecheck(false))
-    function drawStarShape(dc, x, y, tier, color) {
+    function drawStarShape(dc, x, y, tier, color, sprite) {
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        dc.setPenWidth(1);
+        drawStarSprite(dc, x, y, tier, color, sprite);
+    }
 
+    // The sprite alone, with the colour and the pen width already on the Dc.
+    // Every Dc call is a VM-to-native crossing and they dominate the field's
+    // cost - at 200 stars the setColor and setPenWidth the old shape did per
+    // star were together about four calls in every ten. drawStarfield now sets
+    // the pen once for the whole field and the colour once per colour run, and
+    // comes here for the shape.
+    //
+    // Not every Dc call costs the same, which is what the tier split below
+    // turns on: a drawLine is ~6us and a fillCircle ~126us. See below and
+    // docs/starfield-perf.md.
+    (:typecheck(false))
+    function drawStarSprite(dc, x, y, tier, color, sprite) {
         if (tier == 0) {
-            // A single pixel: what a faint star should look like, and far
-            // cheaper than a fill at the counts this field now runs to.
-            dc.drawPoint(x, y);
+            // A three-pixel cross, not a lone pixel. Colour alone could not
+            // rescue the faint tier: a 1x1 sprite on an AMOLED black is under
+            // the size the eye resolves at any brightness the moonlight fade
+            // leaves it, so most of a 200-star field simply was not there to
+            // be counted. Five pixels is still unmistakably the smallest
+            // sprite - tier 1 is a longer cross with a filled centre.
+            //
+            // Both strokes earn their cost. A single three-pixel dash is half
+            // the price - and at ~6us a stroke this tier's 78% share of the
+            // field is the only place halving anything would show - but a
+            // field of dashes reads as scratches rather than stars, whether
+            // they all lie the same way or alternate. Tried and rejected.
+            dc.drawLine(x - 1, y, x + 1, y);
+            dc.drawLine(x, y - 1, x, y + 1);
+            return;
+        }
+
+        // Tiers 1 and up are a single tinted blit. Each used to be a
+        // fillCircle plus two to four strokes, and a fillCircle is by a long
+        // way the most expensive primitive in this module: benchmarked on a
+        // Venu 3 simulator at 126us against 6.4us for a drawLine - 20x a
+        // stroke, and 3x an entire drawBitmap2. It was ~90% of what these
+        // sprites cost.
+        //
+        //   tier 1   139us of strokes and a circle  ->  44us as one blit
+        //   tier 2/3 165us                          ->  43us
+        //
+        // A blit's cost is per-call, not per-pixel: 3x3, 5x5 and 7x7 all
+        // timed within noise of each other. That is also why tier 0 above
+        // stays as two strokes - at 13us it is already cheaper than the ~39us
+        // any blit costs, so a sprite there is a 3x loss. It is 78% of the
+        // field, so getting that half of the split wrong would undo all of
+        // this. See docs/starfield-perf.md.
+        //
+        // sprite is false where something is already drawn underneath - the
+        // zodiac's joining lines - because the sprites are opaque black
+        // outside the star and would erase it. See drawZodiac.
+        //
+        // :tintColor scales the grayscale source by the star's colour, which
+        // is what folds the sparkle's dim diagonals into the same call: they
+        // are baked into the sprite at 45% grey instead of costing a setColor
+        // and two more strokes.
+        if (sprite && _canTint) {
+            _tintOpt[:tintColor] = color;
+            if (tier == 1) {
+                dc.drawBitmap2(x - 2, y - 2, _star5, _tintOpt);
+            } else {
+                dc.drawBitmap2(x - 3, y - 3, _star7, _tintOpt);
+            }
             return;
         }
 
         var big = (tier >= 2);
         var arm = big ? scaled(3) : scaled(2);
-        dc.setPenWidth(1);
         dc.drawLine(x - arm, y, x + arm, y);
         dc.drawLine(x, y - arm, x, y + arm);
         dc.fillCircle(x, y, big ? 2 : 1);
@@ -766,8 +946,14 @@ module Dial {
             var ztier = _zodiacPts[j * 3 + 2];
             var zbase = (ztier >= 2) ? Theme.STAR_BRIGHT : Theme.STAR;
             if (ztier == 2) { ztier = 3; }
+            // sprite = false: the joining lines are already on the Dc and the
+            // sprites are opaque black outside the star, so blitting one over
+            // a line erases the couple of pixels where they meet. The zodiac
+            // is a dozen stars - the strokes it costs are not worth a visible
+            // notch in every line. Nothing is ever underneath a starfield
+            // star, which is why that path can use the sprites.
             drawStar(dc, _zodiacPts[j * 3] + _ox, _zodiacPts[j * 3 + 1] + _oy,
-                ztier, 1.0, sec, j, zbase);
+                ztier, 1.0, sec, j, zbase, false);
         }
     }
 

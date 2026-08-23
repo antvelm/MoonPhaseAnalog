@@ -69,16 +69,20 @@ module Theme {
     const HOUR_TICK_MINOR_W   = 6;
 
     // --- Background ornament ---
-    // The three star tiers. These are the colour before Dial's moonlight fade
-    // multiplies them down, so the faint end has to start high: STAR_DIM stars
-    // are a single pixel, and Dial.starLevel puts most of them out at roughly
-    // two thirds of this value. At the old 0x4E4E58 that landed near RGB 50 on
-    // an AMOLED black, below the point the eye picks a lone pixel out at all,
-    // so a 200-star field read as the forty-odd cross and sparkle sprites and
-    // nothing else. The ladder still rises with the tier, so a brighter star
-    // is still a brighter pixel as well as a bigger sprite.
+    // The three star tiers, and the only place the starfield's colour is set.
+    // These are the value before Dial's moonlight fade multiplies them down,
+    // so the faint end has to start high: Dial.starLevel puts most STAR_DIM
+    // stars out at roughly two thirds of this. At the original 0x4E4E58 that
+    // landed near RGB 50 on an AMOLED black and the faint majority of the
+    // field was invisible, so a 200-star sky read as the forty-odd cross and
+    // sparkle sprites and nothing else. Sprite size was the other half of
+    // that fix - see Dial.drawStarShape. The ladder still rises with the tier,
+    // so a brighter star is a brighter pixel as well as a bigger sprite.
+    //
+    // To retune the field: these three set its colour, and the fade that
+    // scales them lives in Dial.MOON_FLOOR / MOON_WASH / STAR_LEVEL_MIN.
     const STAR         = 0xAAAABC;   // mid star: the small cross
-    const STAR_DIM     = 0x8C8C9C;   // faint field stars; see Dial.STAR_LEVEL_MIN
+    const STAR_DIM     = 0x9C9CAC;   // faint field stars; see Dial.STAR_LEVEL_MIN
     const STAR_BRIGHT  = 0xDCE2EE;
     const ZODIAC_LINE  = 0x24242C;   // constellation sticks: present, never loud
 

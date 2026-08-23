@@ -1,4 +1,24 @@
 <drawables>
     <bitmap id="LauncherIcon" filename="launcher_icon.png"/>
     <bitmap id="RedMoon" filename="moon.png"/>
+
+    <!-- Star sprites for the bright tiers. Grayscale on opaque black: the
+         field draws straight onto Theme.BG (always 0x000000) right after
+         dc.clear, so nothing behind them needs preserving and no transparency
+         is required. drawBitmap2's :tintColor scales by luminance, so white
+         comes out at the star's full colour and the sparkle's 45% grey
+         diagonals come out at 45% of it - one call for the whole sprite.
+
+         automaticPalette="false" is required: drawBitmap2 refuses a
+         palettised source ("Source must not use a color palette"), the same
+         restriction the rotated second-numeral labels hit in renderLabel.
+
+         Sizes are fixed pixels, not scaled(): Dial.scaled(2) and scaled(3)
+         both round to the same value on venu3 (r=227) and venu3s (r=195), so
+         one sprite per tier serves both watches.
+
+         There is deliberately no 3x3 sprite for tier 0 - see
+         Dial.drawStarSprite for why blitting it is a loss. -->
+    <bitmap id="Star5" filename="star_5x5.png" automaticPalette="false"/>
+    <bitmap id="Star7" filename="star_7x7.png" automaticPalette="false"/>
 </drawables>
