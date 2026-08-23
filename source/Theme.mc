@@ -69,9 +69,17 @@ module Theme {
     const HOUR_TICK_MINOR_W   = 6;
 
     // --- Background ornament ---
-    const STAR         = 0x50505A;   // legacy / mid star
-    const STAR_DIM     = 0x4E4E58;   // faint field stars; see Dial.STAR_LEVEL_MIN
-    const STAR_BRIGHT  = 0x9096A2;
+    // The three star tiers. These are the colour before Dial's moonlight fade
+    // multiplies them down, so the faint end has to start high: STAR_DIM stars
+    // are a single pixel, and Dial.starLevel puts most of them out at roughly
+    // two thirds of this value. At the old 0x4E4E58 that landed near RGB 50 on
+    // an AMOLED black, below the point the eye picks a lone pixel out at all,
+    // so a 200-star field read as the forty-odd cross and sparkle sprites and
+    // nothing else. The ladder still rises with the tier, so a brighter star
+    // is still a brighter pixel as well as a bigger sprite.
+    const STAR         = 0xAAAABC;   // mid star: the small cross
+    const STAR_DIM     = 0x8C8C9C;   // faint field stars; see Dial.STAR_LEVEL_MIN
+    const STAR_BRIGHT  = 0xDCE2EE;
     const ZODIAC_LINE  = 0x24242C;   // constellation sticks: present, never loud
 
     // --- Moon palette (flat tones; 16bpp panel bands soft gradients) ---

@@ -1,4 +1,4 @@
-﻿<properties>
+<properties>
     <!--
       Every property here is mirrored by an entry in resources/settings/settings.xml
       (except the two LastFix coordinates, which are storage only) and read through

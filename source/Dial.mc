@@ -233,6 +233,10 @@ module Dial {
         var trail = null;
         if (awake) { trail = cometColors(sec); }
 
+        // Only two dot sizes exist, so scale them once rather than sixty times.
+        var rMajor = scaled(DOT_MAJOR);
+        var rMinor = scaled(DOT_MINOR);
+
         for (var i = 0; i < 60; i += 1) {
             var onFive = (i % 5 == 0);
             var hasNumeral = onFive && showNumerals;
@@ -257,7 +261,7 @@ module Dial {
                 color = Theme.TICK_DIM;
             }
 
-            var r = scaled((onFive && !hasNumeral) ? DOT_MAJOR : DOT_MINOR);
+            var r = (onFive && !hasNumeral) ? rMajor : rMinor;
             if (!hasNumeral || lit != null) {
                 dc.setColor(RainbowWave.tint(color, x, y), Gfx.COLOR_TRANSPARENT);
                 dc.fillCircle(x, y, r);
@@ -267,24 +271,45 @@ module Dial {
         }
     }
 
+    // Every track position owns a fixed hue, so the sixty HSV conversions
+    // behind the wheel are a constant table, not per-frame work. hsvToColor is
+    // a dozen float operations and three roundings, and the spectrum ring mode
+    // was running it once per position per second for an answer that never
+    // changes. The resting ring is dimmed once here too.
+    var _wheel = null;          // full-brightness hue per track position
+    var _wheelRing = null;      // the same wheel at the ring's resting dimness
+    var _comet = null;          // scratch trail, reused so a frame allocates none
+
+    (:typecheck(false))
+    function buildWheel() {
+        _wheel = new [60];
+        _wheelRing = new [60];
+        _comet = new [60];
+        for (var i = 0; i < 60; i += 1) {
+            _wheel[i] = Theme.hsvToColor(Theme.hueForSecond(i), 1.0, 1.0);
+            _wheelRing[i] = Theme.dim(_wheel[i], 0.22);
+        }
+    }
+
     // Colour for each of the 60 track positions, or null where the comet is not.
     (:typecheck(false))
     function cometColors(sec) {
-        var out = new [60];
-        for (var i = 0; i < 60; i += 1) { out[i] = null; }
+        if (_wheel == null) { buildWheel(); }
 
+        var out = _comet;
         var mode = Settings.cometMode;
 
         if (mode == Settings.COMET_SPECTRUM_RING) {
-            // The whole wheel is faintly present at all times.
-            for (var j = 0; j < 60; j += 1) {
-                out[j] = Theme.dim(Theme.hsvToColor(Theme.hueForSecond(j), 1.0, 1.0), 0.22);
-            }
+            // The whole wheel is faintly present at all times, so every
+            // position gets written and there is nothing to clear first.
+            for (var j = 0; j < 60; j += 1) { out[j] = _wheelRing[j]; }
+        } else {
+            for (var i = 0; i < 60; i += 1) { out[i] = null; }
         }
 
         if (mode == Settings.COMET_CLASSIC) {
             // One hue for the whole tail, fading behind the head.
-            var base = Theme.hsvToColor(Theme.hueForSecond(sec), 1.0, 1.0);
+            var base = _wheel[sec % 60];
             var r = (base >> 16) & 0xFF;
             var g = (base >> 8) & 0xFF;
             var b = base & 0xFF;
@@ -303,9 +328,7 @@ module Dial {
         for (var k2 = 0; k2 < 8; k2 += 1) {
             var idx2 = ((sec - k2) % 60 + 60) % 60;
             var f = 1.0 - (k2 / 8.0);
-            out[idx2] = Theme.dim(
-                Theme.hsvToColor(Theme.hueForSecond(idx2), 1.0, 1.0),
-                0.25 + 0.75 * f);
+            out[idx2] = Theme.dim(_wheel[idx2], 0.25 + 0.75 * f);
         }
         return out;
     }
