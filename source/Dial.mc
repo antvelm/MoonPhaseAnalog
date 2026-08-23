@@ -43,6 +43,39 @@ module Dial {
     const DOT_MINOR = 2;
     const DOT_MAJOR = 3;
 
+    // --- Starfield: the Milky Way band ---------------------------------------
+    // The field is two populations: a dense band arcing across the dial, and a
+    // sparse scatter over the rest of it. The band is fixed - it does not turn
+    // with the time - and it is bowed rather than straight, which is what makes
+    // it read as the Milky Way instead of as a stripe.
+    const MW_ANGLE = 0.52;      // band axis, radians clockwise from vertical
+    const MW_BOW   = 0.55;      // how far the arc bows; 0 would be a straight band
+    const MW_WIDTH = 0.30;      // half-width either side of the spine, in radius units
+    const MW_SHARE = 0.62;      // fraction of stars belonging to the band
+    const MW_SPAN  = 0.86;      // band reaches this fraction of the radius
+
+    // Stars keep clear of the hub, where the hands and the moon live, and of
+    // the rim, where the second track runs.
+    const STAR_R_MIN = 0.20;
+    const STAR_R_MAX = 0.86;
+
+    // --- Starfield: moonlight ------------------------------------------------
+    // Moonlight washes stars out, so the sky doubles as a second reading of the
+    // phase the moon disc shows. Three things move together, because a cutoff
+    // on its own only makes the field sparser and the survivors - which are the
+    // brightest, most conspicuous sprites - stay exactly as loud as they were:
+    //
+    //   MOON_FLOOR      faintest magnitude still visible at full moon.
+    //                   Everything below it is skipped.
+    //   MOON_WASH       how much of its brightness the whole field loses by
+    //                   full moon, on top of the cutoff. This is what stops a
+    //                   full moon reading as "the same stars, fewer of them".
+    //   STAR_LEVEL_MIN  how brightly a star draws when it is right at the
+    //                   cutoff, so stars fade out instead of popping.
+    const MOON_FLOOR     = 0.88;
+    const MOON_WASH      = 0.45;
+    const STAR_LEVEL_MIN = 0.55;
+
     var _cx = 0;
     var _cy = 0;
     var _radius = 1.0;
@@ -62,7 +95,7 @@ module Dial {
     var _ox = 0;                // burn-in shift, applied at draw time
     var _oy = 0;
 
-    var _stars = null;          // flat: x, y, tier, brightness
+    var _stars = null;          // flat: x, y, tier, magnitude
     var _zodiacSign = -1;
     var _zodiacPts = null;      // flat: x, y, tier
 
@@ -372,86 +405,225 @@ module Dial {
 
     // --- Background: starfield or zodiac ------------------------------------
 
+    // frac is the moon phase, 0..1. Only the starfield uses it; the zodiac
+    // patterns are an informational display and stay fully lit at every phase,
+    // since fading them by magnitude would break the constellation shapes.
     (:typecheck(false))
-    function drawBackground(dc, sec) {
+    function drawBackground(dc, sec, frac) {
         var mode = Settings.background;
         if (mode == Settings.BG_STARFIELD) {
-            drawStarfield(dc, sec);
+            drawStarfield(dc, sec, frac);
         } else {
             drawZodiac(dc, sec, mode == Settings.BG_ZODIAC_LINES);
         }
     }
 
-    // Deterministic pseudo-random field: the same stars every boot, but denser
-    // and more varied than a hand-written list, and it scales with density.
+    // Deterministic pseudo-random field: the same sky every boot, drawn from
+    // two populations - the Milky Way band, and a sparse scatter over the rest
+    // of the dial.
+    //
+    // Band membership is decided per star rather than by splitting the array,
+    // so star i is the same star at every count: raising StarCount adds stars
+    // without moving the ones already there.
+    //
+    // This runs on setup and on a StarCount change, never on the draw path, so
+    // the sqrt and the resampling below cost nothing per frame.
     (:typecheck(false))
     function buildStars() {
-        var counts = [0, 14, 28, 44];
-        var n = counts[Settings.starDensity];
+        var n = Settings.starCount;
         _stars = new [n * 4];
+        if (n <= 0) { return; }
 
+        var ca = Math.cos(MW_ANGLE);
+        var sa = Math.sin(MW_ANGLE);
+
+        var bright = 0;         // bright stars so far, for the twinkle gate
         var seed = 20260822;
         for (var i = 0; i < n; i += 1) {
             seed = (seed * 75 + 74) % 65537;
-            var u = seed / 65537.0;
-            seed = (seed * 75 + 74) % 65537;
-            var v = seed / 65537.0;
-            seed = (seed * 75 + 74) % 65537;
-            var w = seed / 65537.0;
+            var c = seed / 65537.0;             // band or field
+            var inBand = (c < MW_SHARE);
 
-            // sqrt for uniform area density; kept clear of the hub and the rim.
-            var rr = _radius * (0.20 + 0.66 * Math.sqrt(u));
-            var aa = v * 2.0 * Math.PI;
+            // Position. A band point can fall in the hub or past the rim, so it
+            // gets a few more tries before being clamped into range; clamping is
+            // rare enough not to show as a line of stars on the boundary.
+            var ux = 0.0;
+            var uy = 0.0;
+            var rr = 0.0;
+            for (var attempt = 0; attempt < 5; attempt += 1) {
+                seed = (seed * 75 + 74) % 65537;
+                var u = seed / 65537.0;
+                seed = (seed * 75 + 74) % 65537;
+                var v = seed / 65537.0;
+                seed = (seed * 75 + 74) % 65537;
+                var v2 = seed / 65537.0;
 
+                if (inBand) {
+                    // s runs along the band, d across it. Two uniforms summed
+                    // give a triangular spread, so the band is dense on its
+                    // spine and thins out to either side. The bow term is what
+                    // curves the spine into an arc rather than a straight line.
+                    var s = -1.0 + 2.0 * u;
+                    var d = MW_WIDTH * (v + v2 - 1.0);
+                    var t = MW_BOW * (s * s - 0.5) + d;
+                    ux = (s * ca - t * sa) * MW_SPAN;
+                    uy = (s * sa + t * ca) * MW_SPAN;
+                } else {
+                    // sqrt for uniform area density.
+                    var fr = STAR_R_MIN
+                           + (STAR_R_MAX - STAR_R_MIN) * Math.sqrt(u);
+                    var aa = v * 2.0 * Math.PI;
+                    ux = fr * Math.sin(aa);
+                    uy = -fr * Math.cos(aa);
+                }
+
+                rr = Math.sqrt(ux * ux + uy * uy);
+                if (rr >= STAR_R_MIN && rr <= STAR_R_MAX) { break; }
+            }
+
+            if (rr < 0.0001) {
+                ux = STAR_R_MIN;
+                uy = 0.0;
+            } else if (rr < STAR_R_MIN || rr > STAR_R_MAX) {
+                var target = (rr < STAR_R_MIN) ? STAR_R_MIN : STAR_R_MAX;
+                var k = target / rr;
+                ux = ux * k;
+                uy = uy * k;
+            }
+
+            seed = (seed * 75 + 74) % 65537;
+            var w = seed / 65537.0;             // magnitude within its class
+            seed = (seed * 75 + 74) % 65537;
+            var w2 = seed / 65537.0;            // which class
+
+            // Magnitude spans a wide range with far more faint stars than
+            // bright, which is what makes the moonlight fade legible: the band
+            // is mostly haze that vanishes early. The faint floors sit close to
+            // zero so the dimmest stars start going as soon as there is any
+            // moon at all, rather than surviving the first week intact. Both
+            // populations keep a small bright minority, so a full moon does not
+            // leave an obvious hole where the band was.
+            var mag;
+            if (inBand) {
+                mag = (w2 > 0.90) ? 0.78 + 0.22 * w
+                                  : 0.04 + 0.62 * w * w * w;
+            } else {
+                mag = (w2 > 0.72) ? 0.72 + 0.28 * w
+                                  : 0.18 + 0.54 * w * w;
+            }
+
+            // Sprite size follows magnitude rather than being rolled
+            // separately, so a big sprite always means a bright star. Tier 3 is
+            // tier 2 that also twinkles - see drawStar.
+            //
+            // Every third bright star twinkles, counted rather than drawn from
+            // the LCG. Two reasons: w2 has already been spent deciding which
+            // magnitude branch this star took, so reusing it would make every
+            // bright star a twinkler and leave tier 2 unreachable; and a fresh
+            // draw is no good either, because this generator sampled at a fixed
+            // stride per star is correlated enough that a threshold of 1/3 came
+            // out at 2/3 in practice. A counter pins the number of moving stars
+            // exactly, which is the point of the gate.
             var tier = 0;
-            if (w > 0.92)      { tier = 2; }
-            else if (w > 0.70) { tier = 1; }
+            if (mag >= 0.85) {
+                tier = (bright % 3 == 0) ? 3 : 2;
+                bright += 1;
+            } else if (mag >= 0.62) {
+                tier = 1;
+            }
 
-            _stars[i * 4]     = _cx + rr * Math.sin(aa);
-            _stars[i * 4 + 1] = _cy - rr * Math.cos(aa);
+            // Rounded to whole pixels here rather than per frame: these are
+            // screen coordinates, and drawPoint wants a Number.
+            _stars[i * 4]     = (_cx + ux * _radius + 0.5).toNumber();
+            _stars[i * 4 + 1] = (_cy + uy * _radius + 0.5).toNumber();
             _stars[i * 4 + 2] = tier;
-            _stars[i * 4 + 3] = 0.55 + 0.45 * w;
+            _stars[i * 4 + 3] = mag;
         }
     }
 
     (:typecheck(false))
-    function drawStarfield(dc, sec) {
+    function drawStarfield(dc, sec, frac) {
         if (_stars == null) { return; }
         var n = _stars.size() / 4;
+        if (n <= 0) { return; }
+
+        // Moonlight raises the faintest magnitude that still shows: nothing at
+        // new moon, most of the field by full. Stars under the cutoff are
+        // skipped before any Dc call, so a full moon is also the cheapest frame.
+        var illum = MoonPhase.illumination(frac);
+        var floorMag = MOON_FLOOR * illum;
+        var span = 1.0 - floorMag;
+
+        // The cutoff alone leaves the brightest stars burning at full strength
+        // through every phase, so the field reads as the same sky with gaps in
+        // it. Dimming what survives as well is what makes a full moon look
+        // washed out rather than merely sparse.
+        var wash = 1.0 - MOON_WASH * illum;
+
+        // These sprites are one to three pixels across; there is nothing here
+        // for antialiasing to smooth, and switching it off makes a hundred-odd
+        // tiny fills markedly cheaper. Restored before anything else draws.
+        var aa = (dc has :setAntiAlias);
+        if (aa) { dc.setAntiAlias(false); }
+
         for (var i = 0; i < n; i += 1) {
+            var mag = _stars[i * 4 + 3];
+            if (mag <= floorMag) { continue; }
+
+            // Fade in from black as a star clears the cutoff, so stars dissolve
+            // over several nights instead of popping in and out.
+            var level = wash * (STAR_LEVEL_MIN
+                      + (1.0 - STAR_LEVEL_MIN) * ((mag - floorMag) / span));
+
+            var tier = _stars[i * 4 + 2];
+            var base = (tier >= 2) ? Theme.STAR_BRIGHT
+                     : (tier == 1) ? Theme.STAR
+                     : Theme.STAR_DIM;
+
             drawStar(dc, _stars[i * 4] + _ox, _stars[i * 4 + 1] + _oy,
-                _stars[i * 4 + 2], _stars[i * 4 + 3], sec, i);
+                tier, level, sec, i, base);
         }
+
+        if (aa) { dc.setAntiAlias(true); }
     }
 
     // Three sizes of sprite so the field has depth instead of reading as a
-    // uniform scatter of pixels.
+    // uniform scatter of pixels. Tiers: 0 a single pixel, 1 a small cross, 2 a
+    // four-point sparkle, 3 the same sparkle but twinkling.
+    //
+    // base is passed in rather than derived from the tier, because the two
+    // callers want different palettes: the starfield fades its faintest stars
+    // to STAR_DIM, while the zodiac keeps every constellation star legible.
     (:typecheck(false))
-    function drawStar(dc, x, y, tier, bright, sec, index) {
+    function drawStar(dc, x, y, tier, bright, sec, index, base) {
         var b = bright;
-        // A few of the brightest pulse on the free 1 Hz redraw.
-        if (tier == 2) {
+        // Only tier 3 pulses, on the free 1 Hz redraw, offset per star so they
+        // are not in lockstep. Gating it to its own tier keeps the number of
+        // twinklers at a handful however large the field grows - and stops the
+        // whole sky shimmering at full moon, when the survivors are all bright.
+        if (tier == 3) {
             var phase = ((sec + index * 7) % 8) / 8.0;
             b = b * (0.72 + 0.28 * Math.sin(phase * 2.0 * Math.PI));
         }
 
-        var base = (tier == 2) ? Theme.STAR_BRIGHT
-                 : (tier == 1) ? Theme.STAR : Theme.STAR;
         var color = RainbowWave.tint(Theme.dim(base, b), x, y);
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
 
         if (tier == 0) {
-            dc.fillCircle(x, y, 1);
+            // A single pixel: what a faint star should look like, and far
+            // cheaper than a fill at the counts this field now runs to.
+            dc.drawPoint(x, y);
             return;
         }
 
-        var arm = (tier == 2) ? scaled(3) : scaled(2);
+        var big = (tier >= 2);
+        var arm = big ? scaled(3) : scaled(2);
         dc.setPenWidth(1);
         dc.drawLine(x - arm, y, x + arm, y);
         dc.drawLine(x, y - arm, x, y + arm);
-        dc.fillCircle(x, y, (tier == 2) ? 2 : 1);
+        dc.fillCircle(x, y, big ? 2 : 1);
 
-        if (tier == 2) {
+        if (big) {
             // Faint diagonals give the four-point sparkle its body.
             var d = (arm * 0.55).toNumber();
             dc.setColor(Theme.dim(color, 0.45), Gfx.COLOR_TRANSPARENT);
@@ -493,9 +665,17 @@ module Dial {
             }
         }
 
+        // Full brightness at every phase, and the old two-colour palette: a
+        // constellation has to keep its shape, so the moonlight rules and the
+        // faint STAR_DIM tier that the starfield uses both stay out of here.
+        // Zodiac tier 2 is promoted to 3 so its bright stars still twinkle, as
+        // they did when tier 2 alone carried the pulse.
         for (var j = 0; j < n; j += 1) {
+            var ztier = _zodiacPts[j * 3 + 2];
+            var zbase = (ztier >= 2) ? Theme.STAR_BRIGHT : Theme.STAR;
+            if (ztier == 2) { ztier = 3; }
             drawStar(dc, _zodiacPts[j * 3] + _ox, _zodiacPts[j * 3 + 1] + _oy,
-                _zodiacPts[j * 3 + 2], 1.0, sec, j);
+                ztier, 1.0, sec, j, zbase);
         }
     }
 

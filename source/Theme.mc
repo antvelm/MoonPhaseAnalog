@@ -66,11 +66,11 @@ module Theme {
     const HOUR_TICK_MINOR     = 0x6E7480;
     const HOUR_TICK_MINOR_DIM = 0x2A2A32;
     const HOUR_TICK_MAJOR_W   = 5;
-    const HOUR_TICK_MINOR_W   = 4;
+    const HOUR_TICK_MINOR_W   = 6;
 
     // --- Background ornament ---
     const STAR         = 0x50505A;   // legacy / mid star
-    const STAR_DIM     = 0x3A3A44;
+    const STAR_DIM     = 0x4E4E58;   // faint field stars; see Dial.STAR_LEVEL_MIN
     const STAR_BRIGHT  = 0x9096A2;
     const ZODIAC_LINE  = 0x24242C;   // constellation sticks: present, never loud
 

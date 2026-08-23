@@ -37,6 +37,12 @@ module MoonDial {
     const AMBIENT = 0.06;       // floor so the lit side never goes fully black
     const LIMB_FLOOR = 0.42;    // brightness at the very limb, 1.0 = no darkening
 
+    // How wide the lit crescent has to be before the bright rim on the lit limb
+    // reaches full strength, as a fraction of the disc's width. Below it the rim
+    // fades out, so a new moon is a genuinely dark disc rather than a dark disc
+    // with a hairline crescent drawn round it.
+    const RIM_FADE = 0.06;
+
     (:typecheck(false))
     function draw(dc, mx, my, mr, awake, frac, eclipse, weak) {
         if (eclipse != null && !eclipse[:lunar]) {
@@ -104,7 +110,12 @@ module MoonDial {
             } else if (sinP >= 0) {
                 lx0 = xt; lx1 = w;              // waxing: lit toward the right limb
             } else {
-                lx0 = -w; lx1 = xt;             // waning: lit toward the left limb
+                // Waning: lit toward the left limb, and the terminator runs the
+                // other way round. cos(p) is symmetric about frac 0.5, so
+                // reusing xt unmirrored would replay the waxing crescents in
+                // reverse - a full moon would jump straight to a thin sliver
+                // and grow back to full by the next new moon.
+                lx0 = -w; lx1 = -xt;
             }
             if (lx1 <= lx0) { continue; }       // this row is entirely dark
 
@@ -146,9 +157,16 @@ module MoonDial {
         }
 
         // A thin bright rim on the lit limb, which is what a real terminator
-        // photograph shows and what keeps the disc from looking soft-edged.
-        if (awake && !lunarEclipse) {
-            dc.setColor(Theme.MOON_LIMB, Gfx.COLOR_TRANSPARENT);
+        // photograph shows and what keeps the disc from looking soft-edged. It
+        // is faded out with the crescent's width rather than drawn flat: at new
+        // moon there is no lit limb to rim, and drawing one anyway was what made
+        // a new moon look like a sliver.
+        var litWidth = 1.0 - ((cosP < 0) ? -cosP : cosP);
+        var rim = litWidth / RIM_FADE;
+        if (rim > 1.0) { rim = 1.0; }
+        if (awake && !lunarEclipse && rim > 0.05) {
+            dc.setColor(Theme.blend(Theme.MOON_DARK, Theme.MOON_LIMB, rim),
+                Gfx.COLOR_TRANSPARENT);
             dc.setPenWidth(1);
             if (frac <= 0.5) {
                 dc.drawArc(mx, my, mr - 1, Gfx.ARC_CLOCKWISE, 80, -80);

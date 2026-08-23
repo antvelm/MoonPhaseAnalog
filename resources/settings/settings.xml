@@ -69,13 +69,9 @@
         </settingConfig>
     </setting>
 
-    <setting propertyKey="@Properties.StarDensity" title="@Strings.SetStarDensity">
-        <settingConfig type="list">
-            <listEntry value="0">@Strings.DensityOff</listEntry>
-            <listEntry value="1">@Strings.DensitySparse</listEntry>
-            <listEntry value="2">@Strings.DensityNormal</listEntry>
-            <listEntry value="3">@Strings.DensityDense</listEntry>
-        </settingConfig>
+    <setting propertyKey="@Properties.StarCount" title="@Strings.SetStarCount"
+             prompt="@Strings.SetStarCountPrompt">
+        <settingConfig type="numeric" min="0" max="200" />
     </setting>
 
     <setting propertyKey="@Properties.ShowHourNumerals" title="@Strings.SetShowHours">

@@ -51,11 +51,8 @@
     <string id="SetHandHollow">Hollow hands</string>
     <string id="SetHandHollowPrompt">Cuts a hollow down the middle of the hour and minute hands, given as a percentage of the hand's width at the tip: 0 is solid, 50 leaves a clear border, 80 a hairline outline. The border keeps an even thickness, so the cut-out widens towards the centre. Too thin to show and the hand stays solid.</string>
 
-    <string id="SetStarDensity">Star density</string>
-    <string id="DensityOff">Off</string>
-    <string id="DensitySparse">Sparse</string>
-    <string id="DensityNormal">Normal</string>
-    <string id="DensityDense">Dense</string>
+    <string id="SetStarCount">Stars</string>
+    <string id="SetStarCountPrompt">How many stars in the sky, 0-200, 0 for none. They gather along an arc across the dial like the Milky Way. Moonlight washes them out: the faintest show only near a new moon and fade as the moon fills, until a full moon leaves just the brightest.</string>
 
     <string id="SetShowHours">Show hour numerals</string>
     <string id="SetHourNumeralsOuter">Hour numerals on outer ring</string>

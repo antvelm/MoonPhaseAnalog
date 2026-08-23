@@ -74,10 +74,10 @@
     <property id="HandHollow" type="number">50</property>
 
     <!-- What fills the dial behind the hands (Dial.drawBackground).
-         0 Starfield: procedural stars, count set by StarDensity.
+         0 Starfield: procedural stars, how many set by StarCount.
          1 Zodiac stars: the sign's principal stars only.
          2 Zodiac lines: the same stars joined by constellation lines.
-         StarDensity applies to mode 0 only. -->
+         StarCount applies to mode 0 only. -->
     <property id="Background" type="number">0</property>
 
     <!-- Which constellation the two zodiac backgrounds draw.
@@ -86,10 +86,17 @@
          Ignored when Background is 0. -->
     <property id="ZodiacSign" type="number">0</property>
 
-    <!-- Starfield density: 0 off, 1 sparse (14 stars), 2 normal (28),
-         3 dense (44). The field is seeded, so a given density always yields
-         the same sky. Changing it rebuilds the field on the next draw. -->
-    <property id="StarDensity" type="number">3</property>
+    <!-- Number of stars in the procedural field (Background 0). 0 turns the
+         starfield off. Stars cluster along a fixed arced band across the dial
+         - the Milky Way - with a sparser scatter elsewhere. The field is
+         seeded and each star's identity is fixed by its index, so raising the
+         count adds stars without moving the ones already there, and a given
+         count always yields the same sky. How many are actually drawn depends
+         on the moon phase: moonlight washes out the faint ones, so the whole
+         field shows only near new moon and just the brightest survive a full
+         moon (Dial.MOON_FLOOR). Changing this rebuilds the field on the next
+         draw. Above ~150 check the frame cost on-device before shipping. -->
+    <property id="StarCount" type="number">200</property>
 
     <!-- Rainbow wave: a colour sweep outward across the dial's marks and
          numbers, every few hours. -->

@@ -46,7 +46,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
     var _ox, _oy;            // burn-in shift, applied at draw time
     var _lowPower;
     var _burnIn;
-    var _lastDensity;
+    var _lastStarCount;
     var _lastBackground;
     var _redMoonBitmap;
 
@@ -69,7 +69,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         _burnIn = (settings has :requiresBurnInProtection) && settings.requiresBurnInProtection;
 
         Settings.load();
-        _lastDensity = Settings.starDensity;
+        _lastStarCount = Settings.starCount;
         _lastBackground = Settings.background;
 
         Dial.setup(dc, _cx, _cy, _radius, _scale);
@@ -82,8 +82,8 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
     // in onSettingsChanged because there is no Dc there.
     (:typecheck(false))
     function refreshCaches() {
-        if (Settings.starDensity != _lastDensity) {
-            _lastDensity = Settings.starDensity;
+        if (Settings.starCount != _lastStarCount) {
+            _lastStarCount = Settings.starCount;
             Dial.buildStars();
         }
     }
@@ -106,6 +106,11 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         var clock = System.getClockTime();
         var now = Time.now().value();
         var awake = !_lowPower;
+
+        // The starfield fades with moonlight, so the background needs the same
+        // phase the disc draws. Taken once here, off the astro clock, so a debug
+        // time offset moves the sky and the moon together.
+        var frac = MoonPhase.fractionAt(astroTime(now));
 
         // Burn-in shift: nudge the whole composition on a slow cycle in
         // always-on mode so no pixel is lit continuously.
@@ -131,7 +136,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         Hands.setup(_cx + _ox, _cy + _oy, _scale, clock.sec);
 
         if (awake) {
-            Dial.drawBackground(dc, clock.sec);
+            Dial.drawBackground(dc, clock.sec, frac);
             if (Settings.showOrbitRing) { Dial.drawOrbitRing(dc); }
         }
         Dial.drawSecondTrack(dc, clock.sec, awake);
@@ -139,7 +144,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
         drawDay(dc, awake);
         drawHeartRate(dc, awake);
-        drawMoon(dc, awake, now);
+        drawMoon(dc, awake, now, frac);
         //drawRedMoonSprite(dc);
 
         drawHands(dc, clock, awake);
@@ -240,7 +245,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
     // --- Moon ---------------------------------------------------------------
 
     (:typecheck(false))
-    function drawMoon(dc, awake, now) {
+    function drawMoon(dc, awake, now, frac) {
         var mx = _cx + _ox;
         var my = _cy + _radius * R_MOON + _oy;
         var mr = _radius * 0.15;
@@ -257,9 +262,9 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
                 && !SkyPosition.visibilityConfirmed();
         }
 
-        // The phase has to come off the same clock the eclipse did, or a debug
-        // time offset moves the eclipse while the disc keeps today's phase.
-        var frac = MoonPhase.fractionAt(astroTime(now));
+        // frac is passed in rather than taken here: it has to come off the same
+        // clock the eclipse did, or a debug time offset moves the eclipse while
+        // the disc keeps today's phase. The starfield shares it too.
         MoonDial.draw(dc, mx, my, mr, awake, frac, eclipse, weak);
     }
 

@@ -55,7 +55,7 @@ module Settings {
     var showSecondNumerals;
     var handColor;
     var handHollow;
-    var starDensity;
+    var starCount;
     var background;
     var zodiacSign;
     var enableRainbowWave;
@@ -87,7 +87,7 @@ module Settings {
         showSecondNumerals  = boolOr("ShowSecondNumerals", true);
         handColor           = numberOr("HandColor", HAND_COLOR_SPECTRUM, 0, 8);
         handHollow          = numberOr("HandHollow", 0, 0, 80);
-        starDensity         = numberOr("StarDensity", 2, 0, 3);
+        starCount           = numberOr("StarCount", 120, 0, 200);
         background          = numberOr("Background", 0, 0, 2);
         zodiacSign          = numberOr("ZodiacSign", 0, 0, 12);
         enableRainbowWave   = boolOr("EnableRainbowWave", true);
