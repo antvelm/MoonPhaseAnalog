@@ -126,8 +126,10 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
             _oy = 0;
         }
 
-        RainbowWave.setup(_cx + _ox, _cy + _oy, _radius);
-        RainbowWave.update(now, clock, awake);
+        if (RainbowWave.ENABLED) {
+            RainbowWave.setup(_cx + _ox, _cy + _oy, _radius);
+            RainbowWave.update(now, clock, awake);
+        }
         Perf.mark();
 
         dc.setColor(Theme.BG, Theme.BG);

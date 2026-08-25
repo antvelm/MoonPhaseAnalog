@@ -96,7 +96,7 @@
          field shows only near new moon and just the brightest survive a full
          moon (Dial.MOON_FLOOR). Changing this rebuilds the field on the next
          draw. Above ~150 check the frame cost on-device before shipping. -->
-    <property id="StarCount" type="number">200</property>
+    <property id="StarCount" type="number">120</property>
 
     <!-- Rainbow wave: a colour sweep outward across the dial's marks and
          numbers, every few hours. -->

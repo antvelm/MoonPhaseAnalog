@@ -77,6 +77,14 @@ module Dial {
     const MOON_WASH      = 0.45;
     const STAR_LEVEL_MIN = 0.55;
 
+    // Twinkle, temporarily switched off. Tier 3 is tier 2 plus a per-second
+    // brightness pulse, so with this false those stars keep their sprite and
+    // simply hold still -- and, because the pulse is the only reason they
+    // cannot use the colour cache, they rejoin the cached path in
+    // drawStarfield instead of being recoloured every frame. Flip back to true
+    // to bring the pulse back.
+    const TWINKLE = false;
+
     var _cx = 0;
     var _cy = 0;
     var _radius = 1.0;
@@ -104,9 +112,9 @@ module Dial {
     // drawBitmap2 takes. The dictionary is reused and its :tintColor rewritten
     // per star rather than allocated per call - a few hundred short-lived
     // dictionaries a second is churn the field does not need.
-    var _star3 = null;          // tier 0
-    var _star5 = null;          // tier 1
-    var _star7 = null;          // tier 2 and 3
+    var _star5 = null;          // tier 0
+    var _star9 = null;          // tier 1
+    var _star13 = null;         // tier 2 and 3
     var _tintOpt = null;
     var _canTint = false;
 
@@ -126,13 +134,13 @@ module Dial {
         // reloads references behind your back as memory moves, so a bare
         // reference makes every drawBitmap2 pay a pool resolve - invisible on
         // the simulator, expensive on the watch. get() locks it, which for two
-        // sprites of <=7x7 costs nothing. Same pattern as renderLabel below
+        // sprites of <=13x13 costs nothing. Same pattern as renderLabel below
         // and MoonDial.mc:107.
         _canTint = (dc has :drawBitmap2);
         if (_canTint) {
-            _star3 = lockedBitmap(Rez.Drawables.Star3);
             _star5 = lockedBitmap(Rez.Drawables.Star5);
-            _star7 = lockedBitmap(Rez.Drawables.Star7);
+            _star9 = lockedBitmap(Rez.Drawables.Star9);
+            _star13 = lockedBitmap(Rez.Drawables.Star13);
             _tintOpt = { :tintColor => Theme.STAR };
         }
 
@@ -656,9 +664,10 @@ module Dial {
         // there is nothing to cache for the few seconds it is up.
         var waveOn = RainbowWave.isActive();
 
-        // These sprites are one to three pixels across; there is nothing here
-        // for antialiasing to smooth, and switching it off makes a hundred-odd
-        // tiny fills markedly cheaper. Restored before anything else draws.
+        // These sprites are five to thirteen pixels across and made of
+        // single-pixel arms; there is nothing here for antialiasing to smooth,
+        // and switching it off makes a hundred-odd tiny fills markedly
+        // cheaper. Restored before anything else draws.
         var aa = (dc has :setAntiAlias);
         if (aa) { dc.setAntiAlias(false); }
 
@@ -679,7 +688,7 @@ module Dial {
             var x = _stars[i * 4] + _ox;
             var y = _stars[i * 4 + 1] + _oy;
 
-            if (tier == 3 || waveOn) {
+            if ((tier == 3 && TWINKLE) || waveOn) {
                 // Tier 3 pulses on the second; neither it nor a live wave
                 // survives a cache, so these take the long way round - and
                 // they leave a colour of their own behind.
@@ -721,7 +730,7 @@ module Dial {
     // Brightness steps the fade is quantised to before it becomes a colour.
     // starLevel is continuous in magnitude, so ungrouped every star ends up
     // with a colour of its own and the draw loop pays a setColor for each one.
-    // Ten steps is indistinguishable across sprites one to five pixels wide,
+    // Ten steps is indistinguishable across sprites five to thirteen px wide,
     // and it collapses a couple of hundred colour changes a frame into a
     // couple of dozen. See _starOrder.
     const LEVEL_STEPS = 10;
@@ -809,8 +818,8 @@ module Dial {
     }
 
     // Three sizes of sprite so the field has depth instead of reading as a
-    // uniform scatter of pixels. Tiers: 0 a three-pixel cross, 1 a larger cross
-    // with a centre dot, 2 a four-point sparkle, 3 the same sparkle but
+    // uniform scatter of pixels. Tiers: 0 a five-pixel cross, 1 a longer cross
+    // with a solid core, 2 a four-point sparkle, 3 the same sparkle but
     // twinkling.
     //
     // base is passed in rather than derived from the tier, because the two
@@ -823,7 +832,7 @@ module Dial {
         // are not in lockstep. Gating it to its own tier keeps the number of
         // twinklers at a handful however large the field grows - and stops the
         // whole sky shimmering at full moon, when the survivors are all bright.
-        if (tier == 3) {
+        if (tier == 3 && TWINKLE) {
             var phase = ((sec + index * 7) % 8) / 8.0;
             b = b * (0.72 + 0.28 * Math.sin(phase * 2.0 * Math.PI));
         }
@@ -855,12 +864,12 @@ module Dial {
     (:typecheck(false))
     function drawStarSprite(dc, x, y, tier, color, sprite) {
         if (tier == 0) {
-            // A three-pixel cross, not a lone pixel. Colour alone could not
-            // rescue the faint tier: a 1x1 sprite on an AMOLED black is under
-            // the size the eye resolves at any brightness the moonlight fade
-            // leaves it, so most of a 200-star field simply was not there to
-            // be counted. Five pixels is still unmistakably the smallest
-            // sprite - tier 1 is a longer cross with a filled centre.
+            // A cross with arms of two, not a lone pixel. Colour alone could
+            // not rescue the faint tier: a 1x1 sprite on an AMOLED black is
+            // under the size the eye resolves at any brightness the moonlight
+            // fade leaves it, so most of a 200-star field simply was not there
+            // to be counted. At 5x5 it is still unmistakably the smallest
+            // sprite - tier 1 is twice as long again with a solid core.
             //
             // The cross is now one blit rather than two strokes, which is the
             // single largest saving on the frame: this tier is 78% of the
@@ -876,22 +885,22 @@ module Dial {
             // - so two strokes cost 2.00 against the blit's 1.17. See
             // docs/track-perf.md.
             //
-            // A single three-pixel dash would be cheaper still, and remains
-            // rejected: a field of dashes reads as scratches rather than
-            // stars, whether they all lie the same way or alternate.
+            // A single dash would be cheaper still, and remains rejected: a
+            // field of dashes reads as scratches rather than stars, whether
+            // they all lie the same way or alternate.
             //
-            // The sprite is the same five lit pixels the strokes drew, so this
-            // is a cost change and not a look change. It is opaque black
-            // outside the cross, so it is only safe where nothing is
-            // underneath - hence the same `sprite` flag the bright tiers use,
-            // false from drawZodiac, which lays its joining lines down first.
+            // The sprite is opaque black outside the cross, so it is only safe
+            // where nothing is underneath - hence the same `sprite` flag the
+            // bright tiers use, false from drawZodiac, which lays its joining
+            // lines down first. The stroke fallback below draws the bare cross
+            // without the sprite's tip fade and corner fill.
             if (sprite && _canTint) {
                 _tintOpt[:tintColor] = color;
-                dc.drawBitmap2(x - 1, y - 1, _star3, _tintOpt);
+                dc.drawBitmap2(x - 2, y - 2, _star5, _tintOpt);
                 return;
             }
-            dc.drawLine(x - 1, y, x + 1, y);
-            dc.drawLine(x, y - 1, x, y + 1);
+            dc.drawLine(x - 2, y, x + 2, y);
+            dc.drawLine(x, y - 2, x, y + 2);
             return;
         }
 
@@ -906,11 +915,9 @@ module Dial {
         //   tier 2/3 165us                          ->  43us
         //
         // A blit's cost is per-call, not per-pixel: 3x3, 5x5 and 7x7 all
-        // timed within noise of each other. That is also why tier 0 above
-        // stays as two strokes - at 13us it is already cheaper than the ~39us
-        // any blit costs, so a sprite there is a 3x loss. It is 78% of the
-        // field, so getting that half of the split wrong would undo all of
-        // this. See docs/starfield-perf.md.
+        // timed within noise of each other, which is why doubling the sprites
+        // to 5x5, 9x9 and 13x13 costs nothing per frame. See
+        // docs/starfield-perf.md.
         //
         // sprite is false where something is already drawn underneath - the
         // zodiac's joining lines - because the sprites are opaque black
@@ -923,18 +930,18 @@ module Dial {
         if (sprite && _canTint) {
             _tintOpt[:tintColor] = color;
             if (tier == 1) {
-                dc.drawBitmap2(x - 2, y - 2, _star5, _tintOpt);
+                dc.drawBitmap2(x - 4, y - 4, _star9, _tintOpt);
             } else {
-                dc.drawBitmap2(x - 3, y - 3, _star7, _tintOpt);
+                dc.drawBitmap2(x - 6, y - 6, _star13, _tintOpt);
             }
             return;
         }
 
         var big = (tier >= 2);
-        var arm = big ? scaled(3) : scaled(2);
+        var arm = big ? scaled(6) : scaled(4);
         dc.drawLine(x - arm, y, x + arm, y);
         dc.drawLine(x, y - arm, x, y + arm);
-        dc.fillCircle(x, y, big ? 2 : 1);
+        dc.fillCircle(x, y, big ? 3 : 2);
 
         if (big) {
             // Faint diagonals give the four-point sparkle its body.
@@ -986,7 +993,7 @@ module Dial {
         for (var j = 0; j < n; j += 1) {
             var ztier = _zodiacPts[j * 3 + 2];
             var zbase = (ztier >= 2) ? Theme.STAR_BRIGHT : Theme.STAR;
-            if (ztier == 2) { ztier = 3; }
+            if (ztier == 2 && TWINKLE) { ztier = 3; }
             // sprite = false: the joining lines are already on the Dc and the
             // sprites are opaque black outside the star, so blitting one over
             // a line erases the couple of pixels where they meet. The zodiac

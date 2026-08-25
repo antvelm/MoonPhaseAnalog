@@ -18,6 +18,13 @@ using Toybox.Lang;
 // left alone, so the wave crosses behind the time rather than swallowing it.
 module RainbowWave {
 
+    // Temporarily switched off: the view skips setup()/update() while this is
+    // false, so nothing ever goes active and every tint() call falls straight
+    // through. The schedule logic below is untouched -- flip this back to true
+    // to bring the wave back. (The unit tests drive update() directly and so
+    // are unaffected either way.)
+    const ENABLED = false;
+
     // Eight seconds, because that is about how long the screen stays in high
     // power after a wrist raise: a longer wave gets cut off before it reaches
     // the rim and has to be replayed on the next raise to be seen whole.
