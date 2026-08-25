@@ -1,161 +1,176 @@
 # Moon Phase Astro
 
-An analog watch face for the **Garmin Venue 3 / Venue 3S** that shows the real
-current moon phase, the day of the month, and your heart rate — on a pure-black,
-AMOLED-friendly dial with a rainbow second hand.
+An analog watch face for the **Garmin Venu 3 / Venu 3S**. The moon at 6
+o'clock is the real one — shaded as a sphere, in tonight's phase, turning copper
+when the Earth's shadow crosses it. Behind the hands is a sky that dims as the
+moon fills. On a pure-black, AMOLED-friendly dial, with a second hand that
+sweeps the spectrum once a minute.
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform: Connect IQ](https://img.shields.io/badge/platform-Garmin%20Connect%20IQ-007cc3.svg)
 ![Devices: Venu 3 / Venu 3S](https://img.shields.io/badge/devices-Venu%203%20%2F%20Venu%203S-333.svg)
 
 <p align="center">
-  <img src="screenshots/1.png" alt="Moon Phase Astro watch face" width="360">
+  <img src="screenshots/features/half-moon.png" alt="Moon Phase Astro at first quarter" width="380">
 </p>
 
-## Features
+---
 
-- **Real moon phase** — a warm off-white moon subdial at 6 o'clock, shaded as a
-  sphere: a crisp terminator with a smooth limb-darkening gradient toward the
-  edge, and lunar maria clipped by the terminator so they appear and vanish
-  correctly through the month. The math is on-device (`source/MoonPhase.mc`).
-- **Eclipses** — the moon turns copper during a lunar eclipse and shows a corona
-  during a solar one. Every eclipse from 2025 to 2045 is built in from the NASA
-  catalogue; past that the face computes them on the watch. Optionally gated on
-  whether the eclipse is actually above your horizon.
-- **Full numerals** — bright white hour numerals, plus grey five-second numerals
-  set radially on the outermost ring, sharing that ring with the tick dots.
-- **Seven hand styles** — Dauphine, Baton, Syringe, Skeleton, Breguet, Alpha and
-  Sword, switchable from the phone without a rebuild.
-- **Spectrum second hand** — its hue sweeps the full spectrum once per minute,
-  trailing a comet tail in one of three styles.
-- **Backgrounds** — a fixed starfield of layered star sprites, or the star
-  pattern of a zodiac constellation (stars only, or joined by lines).
-- **Daily rainbow wave** — once a day a band of spectrum washes outward across
-  the whole face.
+## The moon
+
+Not a set of eight cut-out icons. The disc is shaded a scanline at a time: the
+surface normal of a sphere gives a Lambert term, so the terminator falls off as
+a gradient and the limb darkens the way a real moon does. The lunar maria are
+part of the same ramp, so they shade with the surface and are clipped by the
+terminator — they appear and vanish through the month exactly where they should.
+
+The phase itself is computed on the watch from the mean synodic month, off no
+network and no phone.
+
+## Eclipses
+
+During a lunar eclipse the disc turns copper; during a solar one it is occulted
+and grows a corona. Every eclipse from **2025 to 2045** — 93 events — is built
+in from the NASA GSFC catalogue, so the dates and magnitudes are exact rather
+than estimated. Past 2045 the face falls back to computing them on the watch
+from Meeus' node math, which is [validated against every event in the
+table](docs/DEVELOPMENT.md#eclipse-math) rather than assumed correct.
+
+Optionally the effect is gated on whether the eclipsed body is actually above
+your horizon. That check uses the **last known** GPS position only — it never
+asks for a fix, so it costs no battery — and it fails open: no position means
+the eclipse is shown, never hidden. Penumbral lunar eclipses are detected and
+deliberately not drawn, because they look like nothing in the sky.
+
+| Lunar eclipse | Solar eclipse |
+|---|---|
+| <img src="screenshots/features/eclipse-lunar.png" width="300"> | <img src="screenshots/features/eclipse-solar.png" width="300"> |
+
+## The sky behind the dial
+
+A field of up to 200 stars, gathered along a bowed band across the dial — the
+Milky Way — with a sparser scatter elsewhere. Each star carries a magnitude,
+and **moonlight washes the field out**: near a new moon the whole sky shows, by
+first quarter the band is gone, and a full moon leaves about a dozen bright
+anchors, dimmed as well as thinned. The sky is a second reading of the same
+phase the disc shows.
+
+| First quarter | New moon |
+|---|---|
+| <img src="screenshots/features/half-moon.png" width="300"> | <img src="screenshots/features/new-moon-stars.png" width="300"> |
+
+Same `Stars` setting in both shots. The difference is only how much of the sky
+the moon is letting through.
+
+Or swap the field for a **zodiac constellation** — the principal stars of any of
+the twelve, alone or joined by the conventional lines. Astronomy only: no sign
+glyphs, no figures. Left on Auto it follows the Sun's current sign through the
+year.
+
+## The dial
+
+The second track is the outermost thing on the face: sixty positions round the
+rim, 48 tick dots and 12 five-second numerals **sharing one ring**, each numeral
+set radially in place of the dot it would have covered. `drawText` cannot
+rotate, so those labels are rasterised once at layout and blitted through an
+affine transform thereafter.
+
+The hour marks have three styles — full numerals, numerals at 12/3/6/9 with bold
+ticks between, or ticks alone — and can be moved out to the second track's
+radius if you want the hours large and the rim busy.
+
+## The hands
+
+One silhouette, drawn well: a tapered baton capped at both ends by a circle and
+sided by the two external tangents of those circles, emitted as a single closed
+polygon so the cap can never sit a pixel off the shaft.
+
+They take nine colours — eight fixed presets, or **Spectrum**, where they ride
+the same hue as the second hand and the whole time display turns through the
+wheel once a minute. Every shot on this page is that one setting, caught at a
+different second: orange, green, blue, violet, all within the same minute. A
+hollow setting cuts an even-bordered channel down the middle, from solid through
+to a hairline outline.
+
+The second hand is always the spectrum needle, and it trails a comet down the
+track behind it — one hue fading back, a scatter of hues from around the wheel,
+or the same over a permanently dim colour wheel.
+
+## The rest
+
 - **Complications** — a classic `FRI 27` date at 3 o'clock, heart rate with a
   heart glyph at 9 o'clock.
-- **Always-on aware** — in low-power mode the colour and ornamentation drop to a
-  dim wireframe, and the whole face drifts a few pixels on a slow cycle to protect
-  against burn-in.
-- **Configurable** — everything above is a setting in Garmin Connect; see
-  [Settings](#settings). Colours live in `source/Theme.mc`.
+- **Always-on aware** — in low power the background, the comet and the second
+  hand drop out and the hands become dimmed wireframes that keep their colour
+  instead of reverting to grey. The whole composition drifts a few pixels on a
+  four-minute cycle so no pixel stays lit.
+- **One code path, both sizes** — every dimension is a fraction of the screen
+  radius, so the Venu 3 (454 px) and Venu 3S (390 px) render from the same
+  source with no per-device layout.
+- **Rainbow wave** — a band of spectrum washing outward across the marks and
+  numerals every few hours. Written, scheduled and unit-tested, but **compiled
+  out of the current build** while the frame budget is being tuned; see
+  [DEVELOPMENT.md](docs/DEVELOPMENT.md#features-currently-switched-off).
 
 ## Settings
 
-Set these in **Garmin Connect > the watch face > Settings**, or in the simulator
-under **Settings > Watchface Settings**.
+In **Garmin Connect → the watch face → Settings**, or in the simulator under
+**Settings → Watchface Settings**.
 
 | Setting | Default | Notes |
 |---|---|---|
-| Hand style | Dauphine | Seven silhouettes |
-| Comet trail | Classic | Classic single hue, spectrum trail, or spectrum ring |
+| Comet trail | Spectrum trail | Classic single hue, spectrum trail, or spectrum ring |
 | Comet crosses the numerals | off | On, the trail runs unbroken through the five-second marks |
 | Show orbit ring | off | The faint dotted circle inside the hour numerals |
+| Hand colour | Spectrum | Or one of eight fixed presets |
+| Hollow hands | 50 | 0 is solid, 80 a hairline outline |
 | Background | Starfield | Or a zodiac constellation, with or without lines |
 | Zodiac sign | Auto | Auto follows the current sun sign |
-| Star density | Normal | Off / sparse / normal / dense |
+| Stars | 120 | 0–200; how many the moon lets through varies with the phase |
 | Show hour numerals | on | |
+| Hour numerals on outer ring | off | Moves them to the second track, bigger and upright |
+| Hour mark style | Numerals + lines | Numerals, numerals + lines, or lines only |
 | Show second numerals | on | |
-| Daily rainbow wave | on | Fires on the first wrist raise after the set hour |
-| Rainbow wave hour | 0 | |
+| Rainbow wave | on | No effect in this build — the wave is compiled out |
+| Rainbow wave start hour | 0 | |
+| Hours between waves | 3 | 24 gives one wave a day |
 | Eclipse effects | on | |
-| Show eclipses | Always | Or only when above your horizon (uses last known GPS, never requests a fix) |
+| Show eclipses | Always | Or only when above your horizon (last known GPS, never requests a fix) |
 | Eclipse data | Built in through 2045 | Or always calculate on the watch |
 
-There are also diagnostic read-outs (last position used, eclipse data status) and
-test switches (force an eclipse, shift the astronomy clock, override the position,
-fire the rainbow wave every minute). See [`docs/eclipse-test-dates.md`](docs/eclipse-test-dates.md).
+Two read-only diagnostics (**Eclipse data status**, **Last position used**) are
+written back by the face, and a group of test switches can force an eclipse,
+shift the astronomy clock, park the hands at a fixed time, override the position
+and fire the wave every minute. See [`docs/eclipse-test-dates.md`](docs/eclipse-test-dates.md).
 
-## Tuning the look in code
+## Install
 
-The proportions are deliberately gathered into two blocks of constants:
+Build the `.prg` matching your watch and copy it into `GARMIN\APPS\` over USB.
+Full step-by-step instructions, including the Garmin Express gotcha and
+on-watch debugging, are in [`INSTALL.md`](INSTALL.md).
 
-| What | Where |
-|---|---|
-| Ring radii, second-numeral font and size, hour-numeral font, tick dot sizes | `TUNING` block at the top of `source/Dial.mc` |
-| Date and heart-rate fonts, heart icon size, complication positions | `TUNING` block at the top of `source/MoonPhaseAnalogView.mc` |
-| Moon gradient smoothness and limb darkening | `LEVELS`, `STEP_PX`, `LIMB_FLOOR` in `source/MoonDial.mc` |
-| All colours | `source/Theme.mc` |
+## Build from source
 
-The five-second numerals use `FONT_XTINY`, the smallest built-in font. To go
-smaller than that, lower `Dial.SEC_LABEL_SCALE` — the labels are pre-rendered
-once and blitted through an affine transform, so the scale is free at runtime.
-
-## Requirements
-
-- A **Garmin Venu 3 (45 mm)** or **Venu 3S (41 mm)** watch.
-- To build from source: the [Garmin Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/)
-  (min API level 5.2.0) and a working Java runtime (Temurin/Adoptium JDK 17 or 21
-  recommended).
-
-## Build
-
-The included PowerShell script locates the Connect IQ SDK and a working Java
-runtime, then produces signed `.prg` files for both watch sizes in `bin\`:
+Needs the [Connect IQ SDK](https://developer.garmin.com/connect-iq/sdk/) (min
+API 5.2.0) and a Java runtime — Temurin/Adoptium JDK 17 or 21. The script finds
+both and signs both watch sizes into `bin\`:
 
 ```powershell
 .\build.ps1              # release builds for venu3 and venu3s
-.\build.ps1 -Debug       # debug builds (for the simulator)
+.\build.ps1 -Debug       # debug builds, for the simulator
+.\run-simulator.ps1      # build and open in the simulator (or: run-simulator.ps1 venu3s)
 ```
 
-> Note: this project ships build scripts that work around a broken Oracle
-> "javapath" Java stub by calling the compiler with a known-good JRE directly. If
-> your `java` on PATH already works, the scripts use it automatically.
+## Contributing and internals
 
-## Preview in the simulator
-
-```powershell
-.\run-simulator.ps1            # or:  .\run-simulator.ps1 venu3s
-```
-
-This builds the face and opens it in the Connect IQ simulator, where you can use
-**Settings > Time** and the power-mode toggles to watch the moon phase, the
-spectrum second hand, and the always-on look.
-
-## Install on your watch
-
-Build the `.prg` that matches your watch, then copy it into the watch's
-`GARMIN\APPS\` folder over USB (MTP). Full step-by-step instructions — including
-the Garmin Express gotcha and on-watch debugging — are in [`INSTALL.md`](INSTALL.md).
-
-## Project layout
-
-| File | Purpose |
-|------|---------|
-| `manifest.xml` | App metadata; targets venu3 + venu3s, min API 5.2.0 |
-| `monkey.jungle` | Build configuration |
-| `source/MoonPhaseAnalogApp.mc` | App entry point |
-| `source/MoonPhaseAnalogView.mc` | Layout, frame orchestration, complications |
-| `source/Dial.mc` | Second track, numerals, comet, starfield, zodiac |
-| `source/Hands.mc` | The seven hand silhouettes |
-| `source/MoonDial.mc` | Moon shading and the eclipse looks |
-| `source/MoonPhase.mc` | Lunar phase and eclipse detection (no UI) |
-| `source/EclipseData.mc` | Generated: 93 eclipses, 2025-2045 |
-| `source/SkyPosition.mc` | Solar position and the GPS visibility gate |
-| `source/Zodiac.mc` | Star patterns for the 12 constellations |
-| `source/RainbowWave.mc` | The daily wave |
-| `source/Settings.mc` | Cached, guarded property access |
-| `source/Complications.mc` | Date + heart rate lookups |
-| `source/Theme.mc` | Colour palette + colour helpers |
-| `source/EclipseTest.mc` | On-watch unit tests (`:test` build only) |
-| `resources/` | App name, launcher icon, settings + properties |
-| `build.ps1` | One-command build for both sizes |
-| `run-simulator.ps1` | Build + open in the simulator |
-| `tools/` | Data generators, math validator, test runner |
-| `docs/` | Eclipse catalogue and test script |
-| `INSTALL.md` | Detailed sideloading guide |
-
-## Tests
-
-```powershell
-.\tools\run-tests.ps1              # on-watch unit tests in the simulator
-.\tools\check-eclipse-math.ps1     # validate the computed eclipse fallback
-```
-
-`source/EclipseData.mc` is generated — edit `docs/eclipse-events.tsv` and re-run
-`tools\gen-eclipse-data.ps1` (and `tools\gen-eclipse-doc.ps1`) rather than
-editing it by hand.
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) is the map: what each module does,
+where the tuning constants live, what the frame actually costs on hardware, how
+the screenshots and the eclipse table are generated, and the Connect IQ
+platform limits that shaped the code.
 
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 Anton Velmozhnyi.
+
+Eclipse circumstances are derived from the NASA GSFC eclipse catalogue (Fred
+Espenak), which is in the public domain.

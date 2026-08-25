@@ -67,6 +67,7 @@ module Settings {
     var eclipseSource;
     var debugEclipse;
     var debugTimeOffsetDays;
+    var debugClock;
     var debugLatitude;
     var debugLongitude;
 
@@ -99,6 +100,7 @@ module Settings {
         eclipseSource       = numberOr("EclipseSource", 0, 0, 1);
         debugEclipse        = numberOr("DebugEclipse", 0, 0, 2);
         debugTimeOffsetDays = floatOr("DebugTimeOffsetDays", 0.0);
+        debugClock          = numberOr("DebugClock", -1, -1, 235959);
         debugLatitude       = floatOr("DebugLatitude", COORD_UNSET);
         debugLongitude      = floatOr("DebugLongitude", COORD_UNSET);
 

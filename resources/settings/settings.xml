@@ -169,6 +169,11 @@
         <settingConfig type="numeric" min="-40000" max="40000" />
     </setting>
 
+    <setting propertyKey="@Properties.DebugClock" title="@Strings.SetDebugClock"
+             prompt="@Strings.SetDebugClockPrompt">
+        <settingConfig type="numeric" min="-1" max="235959" />
+    </setting>
+
     <setting propertyKey="@Properties.DebugLatitude" title="@Strings.SetDebugLat"
              prompt="@Strings.SetDebugCoordPrompt">
         <settingConfig type="numeric" min="-999" max="999" />

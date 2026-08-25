@@ -176,7 +176,8 @@
 
     <!-- Shift the clock the astronomy runs on, in days; fractions are allowed
          (0.5 is twelve hours). Moves moon phase, sky position and eclipse
-         lookups; the displayed time moves with it. 0.0 is real time. -->
+         lookups only - the hands keep showing the real time, which is what
+         makes it safe to park the face on an eclipse. 0.0 is real time. -->
     <property id="DebugTimeOffsetDays" type="float">0.0</property>
 
     <!-- Pretend the watch is somewhere else, in degrees: latitude -90..90,
@@ -186,4 +187,12 @@
          restore it on both to go back to the real fix. -->
     <property id="DebugLatitude" type="float">999.0</property>
     <property id="DebugLongitude" type="float">999.0</property>
+
+    <!-- Park the displayed time, as HHMMSS: 101035 is the classic 10:10:35 the
+         screenshot tools use, where the hands frame the dial instead of hiding
+         it. -1 is off, and the face shows the real time.
+         This moves nothing but the hands and the comet - the date complication
+         still reads today, and the astronomy still runs on the real clock
+         (shifted by DebugTimeOffsetDays if that is set). -->
+    <property id="DebugClock" type="number">-1</property>
 </properties>

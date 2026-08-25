@@ -6,19 +6,42 @@ using Toybox.Time;
 using Toybox.Lang;
 
 // Minimal-futurist analog face:
-//   - second track at 0.90R: 48 tick dots and 12 radial numerals on one ring,
+//   - second track at 0.94R: 48 tick dots and 12 radial numerals on one ring,
 //     with the spectrum comet riding the same ring
-//   - hour numerals at 0.76R in bright white
-//   - selectable hand style over a starfield or a zodiac constellation
+//   - hour marks at 0.78R -- numerals, ticks, or a mix (Settings.hourMarkStyle)
+//   - tapered baton hands, optionally hollow, over a starfield or a zodiac
+//     constellation
 //   - procedural moon-phase subdial at 6 o'clock, which turns copper during a
 //     lunar eclipse and shows a corona during a solar one
 //   - "FRI 27" date at 3 o'clock, heart rate at 9 o'clock
 //   - every few hours, a rainbow wave washes outward across the dial's
-//     numbers, marks and stars
+//     numbers, marks and stars (currently off: RainbowWave.ENABLED)
 //
 // This class owns layout and ordering; the drawing lives in Dial, Hands and
 // MoonDial. Everything is derived from the screen radius, so one code path
 // serves both the Venu 3 (454x454) and Venu 3S (390x390).
+
+// A stand-in for System.ClockTime, so Settings.debugClock can park the hands at
+// a fixed time for screenshots -- 101035 being the 10:10:35 of watch
+// photography, where the hands frame the dial instead of covering it. Only the
+// three fields the face reads off a ClockTime are provided; nothing here can
+// construct one with chosen values, hence the substitute.
+class FixedClock {
+    var hour;
+    var min;
+    var sec;
+
+    // The value is read as decimal digits, not as a count of seconds: each
+    // field is its own two digits, so 101035 is 10:10:35 rather than 101,035
+    // seconds. Out-of-range digits (a 75 in the minutes) simply put the hand
+    // past the top of the dial; this is a test property, not an input to guard.
+    function initialize(hhmmss) {
+        hour = (hhmmss / 10000) % 100;
+        min  = (hhmmss / 100) % 100;
+        sec  = hhmmss % 100;
+    }
+}
+
 class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
     // -----------------------------------------------------------------------
@@ -106,6 +129,7 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         Perf.mark();
 
         var clock = System.getClockTime();
+        if (Settings.debugClock >= 0) { clock = new FixedClock(Settings.debugClock); }
         var now = Time.now().value();
         var awake = !_lowPower;
 

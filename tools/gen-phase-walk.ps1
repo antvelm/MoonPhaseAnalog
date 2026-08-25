@@ -122,6 +122,7 @@ $baseline = @{
     WaveTestMode        = "false"
     EclipseEffects      = "false"
     DebugEclipse        = 0
+    DebugClock          = 101035
     DebugLatitude       = "999.0"
     DebugLongitude      = "999.0"
 }

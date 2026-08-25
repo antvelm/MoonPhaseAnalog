@@ -68,7 +68,7 @@
 
     <!-- Rainbow wave -->
     <string id="SetWave">Rainbow wave</string>
-    <string id="SetWavePrompt">Every few hours a band of spectrum washes outward across the face, colouring the numbers, marks and stars as it passes. It runs for about 12 seconds, and fires on the first wrist raise after each slot.</string>
+    <string id="SetWavePrompt">Every few hours a band of spectrum washes outward across the face, colouring the numbers, marks and stars as it passes. It runs for about 8 seconds, and fires on the first wrist raise after each slot.</string>
     <string id="SetWaveHour">Rainbow wave start hour</string>
     <string id="SetWaveHourPrompt">The earliest hour the wave may fire, and the hour the interval counts from.</string>
     <string id="SetWaveInterval">Hours between waves</string>
@@ -105,6 +105,9 @@
 
     <string id="SetTimeOffset">Astronomy time offset (days)</string>
     <string id="SetTimeOffsetPrompt">Shifts only the moon and eclipse calculations, so the face keeps showing the real time. Leave at 0 for normal use.</string>
+
+    <string id="SetDebugClock">Fixed time (HHMMSS)</string>
+    <string id="SetDebugClockPrompt">Parks the hands at a set time, written as HHMMSS - 101035 is the classic 10:10:35 used for photographs. The date and the astronomy are unaffected. -1 shows the real time.</string>
 
     <string id="SetDebugLat">Test latitude</string>
     <string id="SetDebugLon">Test longitude</string>
