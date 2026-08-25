@@ -7,11 +7,16 @@ simulator, with `source/TrackBench.mc`.
 
 ---
 
+> **Frame totals here are superseded.** The whole frame now costs 60 ms at full
+> moon and 100 ms at new; see [`DEVELOPMENT.md`](DEVELOPMENT.md#performance).
+> The per-primitive µs table below is a property of the hardware and still
+> stands — it is what the totals were brought down with.
+
 ## The number
 
-**`track` ≈ 15 ms on a Venu 3.** Whole frame is **84 ms at full moon, 140 ms at
-new moon** (device, current release code). So the track is ~11% of the worst
-frame and ~18% of the best one.
+**`track` ≈ 15 ms on a Venu 3.** Whole frame was **84 ms at full moon, 140 ms at
+new moon** when this was measured. So the track was ~11% of the worst frame and
+~18% of the best one.
 
 ## What it draws
 

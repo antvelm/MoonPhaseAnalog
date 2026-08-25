@@ -98,24 +98,35 @@ README says plainly that toggling it does nothing in this build.
 ## Performance
 
 A watch face gets one `onUpdate` per second while the screen is awake, so the
-frame time *is* a CPU duty cycle: 120 ms is 12% of every waking second, and that
+frame time *is* a CPU duty cycle: 100 ms is 10% of every waking second, and that
 percentage is what the battery pays. The hard ceiling is elsewhere — Connect
 IQ's watchdog counts **240,000 VM instructions per callback** — and draw-heavy
 code does not approach it. This is a battery problem, not a crash risk.
 
-Measured on a Venu 3, 2026-08-23 (`docs/starfield-perf.md`, `docs/track-perf.md`):
+Current budget on a Venu 3, at the default `StarCount` of 120:
 
 | | |
 |---|---|
-| Whole frame, full moon | **~84 ms** |
-| Whole frame, new moon (every star drawn) | **~140 ms** |
-| Floor that is not the starfield | ~66 ms |
-| `bg` (the starfield) | `≈ 0.52 × StarCount − 7` ms |
-| Cost per Dc draw call | ~0.26 ms |
+| Whole frame, full moon | **60 ms** |
+| Whole frame, new moon (every star drawn) | **100 ms** |
+
+The 40 ms between them is the starfield and nothing else. Moonlight is the only
+thing that differs: at full moon about a dozen stars survive the cutoff, at new
+moon all 120 draw. Everything else on the dial costs the same either way, which
+makes the full-moon figure the floor the rest of the face sits on.
 
 **Draw calls are the entire cost.** The Monkey C arithmetic around them — array
 indexing, the loops, the trigonometry — is noise by comparison. Any optimisation
-that does not remove a `dc.` call is not an optimisation.
+that does not remove a `dc.` call is not an optimisation. The cost is linear in
+the number of stars, so `StarCount` is the one setting that moves the budget.
+
+> The per-section model in [`starfield-perf.md`](starfield-perf.md) and
+> [`track-perf.md`](track-perf.md) — a ~66 ms non-starfield floor,
+> `bg ≈ 0.52 × StarCount − 7` ms, ~0.26 ms per draw call — was measured
+> 2026-08-23, before the frame came down to the figures above. The shape still
+> holds; the constants have moved, and re-deriving them means another overlay
+> run. The per-primitive µs table below is a property of the hardware and is
+> unaffected.
 
 The corollaries that took measurement to learn:
 

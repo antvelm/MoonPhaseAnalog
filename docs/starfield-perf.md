@@ -3,6 +3,11 @@
 What `Dial.drawStarfield` actually costs on hardware, which optimisations paid,
 which did not, and what is left. Measured 2026-08-23 on branch `v2`.
 
+> **The totals here are superseded.** The whole frame now costs 60 ms at full
+> moon and 100 ms at new, of which ~40 ms is the field at `StarCount` 120; see
+> [`DEVELOPMENT.md`](DEVELOPMENT.md#performance). The method, the reproduction
+> steps and the gotchas below are unchanged — only the constants moved.
+
 ---
 
 ## How to reproduce a measurement
