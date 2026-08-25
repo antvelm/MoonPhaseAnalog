@@ -1,0 +1,198 @@
+<properties>
+    <!--
+      Every property here is mirrored by an entry in resources/settings/settings.xml
+      (except the two LastFix coordinates, which are storage only) and read through
+      source/Settings.mc. The value below is the default: it is what a fresh install
+      uses, and what Settings.mc falls back to when a stored value is missing or out
+      of range. Widening a range here means widening the guard in Settings.load too.
+    -->
+
+    <!-- Appearance -->
+
+    <!-- How the second-track comet is coloured (Dial.cometColors).
+         0 Classic: one hue for the whole 8-dot tail, fading behind the head.
+         1 Spectrum trail: the tail runs through the spectrum as it moves.
+         2 Spectrum ring: as above, over a permanently dim full colour wheel. -->
+    <property id="CometMode" type="number">1</property>
+
+    <!-- What the comet does at the 5-second marks that carry a numeral.
+         false: skip them, so the tail breaks around the numbers.
+         true: light them too, so the tail runs unbroken all the way round.
+         Only visible when ShowSecondNumerals is on - with numerals hidden
+         there is nothing for the tail to break around. -->
+    <property id="CometOnFiveSec" type="boolean">false</property>
+
+    <!-- Draw the thin orbit circle the moon marker travels along. -->
+    <property id="ShowOrbitRing" type="boolean">false</property>
+
+    <!-- Hour numerals on the inner dial. -->
+    <property id="ShowHourNumerals" type="boolean">true</property>
+
+    <!-- Move the hour numerals from the inner dial out to the second track's
+         radius, in a bigger font. They stay upright there rather than
+         rotating to face outward like the 5-second numerals do, and they
+         take over that ring's 12 shared marks - ShowSecondNumerals's labels
+         are suppressed at those marks while this is on, to avoid overlap.
+         Ignored when ShowHourNumerals is false. -->
+    <property id="HourNumeralsOuter" type="boolean">false</property>
+
+    <!-- What ShowHourNumerals draws at the hour positions.
+         0 Numerals: "1".."12".
+         1 Lines: numerals at 12/3/6/9, a bold radial tick at the other
+         eight hours.
+         2 Lines, cardinal only: a bold tick at 12/3/6/9, a thin minor tick
+         at the other eight hours.
+         Ignored when ShowHourNumerals is false. HourNumeralsOuter still
+         chooses the inner or outer ring for whichever style this picks. -->
+    <property id="HourMarkStyle" type="number">1</property>
+
+    <!-- Numerals every 5 seconds on the outer track. Suppressed automatically
+         while the watch is asleep or cannot rotate text, whatever this says. -->
+    <property id="ShowSecondNumerals" type="boolean">true</property>
+
+    <!-- Colour of the hour and minute hands (Theme.handPreset).
+         0 White, 1 Cool white, 2 Lume green, 3 Ice blue, 4 Amber, 5 Orange,
+         6 Red, 7 Magenta.
+         8 Spectrum: no fixed colour - the hands ride the same hue as the
+         second hand, so the whole time display glows as one and turns through
+         the wheel once a minute.
+         The daily rainbow wave still washes over whatever is picked, and in
+         always-on mode the colour is dimmed rather than replaced by grey
+         (Hands.LOW_POWER_LEVEL). Does not touch the second hand, which is
+         always the spectrum needle. -->
+    <property id="HandColor" type="number">8</property>
+
+    <!-- Cut a hollow down the middle of the hour and minute hands, as a
+         percentage of the hand's width at its tip: 0 draws them solid, 50
+         leaves a border half the tip's width, 80 a hairline outline. The
+         border keeps that thickness all the way down the hand, so the cut-out
+         widens towards the centre as the hand does. Settings too thin to leave
+         a visible border (Hands.MIN_RIM / MIN_CORE) fall back to solid, which
+         is what the minute hand does first since it is the narrower of the
+         two. The cut-out is painted in the dial's black rather than being
+         see-through - Dc cannot clip. -->
+    <property id="HandHollow" type="number">50</property>
+
+    <!-- What fills the dial behind the hands (Dial.drawBackground).
+         0 Starfield: procedural stars, how many set by StarCount.
+         1 Zodiac stars: the sign's principal stars only.
+         2 Zodiac lines: the same stars joined by constellation lines.
+         StarCount applies to mode 0 only. -->
+    <property id="Background" type="number">0</property>
+
+    <!-- Which constellation the two zodiac backgrounds draw.
+         0 Auto: follows the Sun's current sign, changing through the year.
+         1-12 pin one sign, Aries through Pisces in zodiac order.
+         Ignored when Background is 0. -->
+    <property id="ZodiacSign" type="number">0</property>
+
+    <!-- Number of stars in the procedural field (Background 0). 0 turns the
+         starfield off. Stars cluster along a fixed arced band across the dial
+         - the Milky Way - with a sparser scatter elsewhere. The field is
+         seeded and each star's identity is fixed by its index, so raising the
+         count adds stars without moving the ones already there, and a given
+         count always yields the same sky. How many are actually drawn depends
+         on the moon phase: moonlight washes out the faint ones, so the whole
+         field shows only near new moon and just the brightest survive a full
+         moon (Dial.MOON_FLOOR). Changing this rebuilds the field on the next
+         draw. Above ~150 check the frame cost on-device before shipping. -->
+    <property id="StarCount" type="number">120</property>
+
+    <!-- Rainbow wave: a colour sweep outward across the dial's marks and
+         numbers, every few hours. -->
+
+    <!-- Master switch for the wave. Note that WaveTestMode overrides this:
+         with test mode on the wave fires even when this is false. -->
+    <property id="EnableRainbowWave" type="boolean">true</property>
+
+    <!-- Earliest local hour (0-23) the wave may fire, and the anchor the
+         interval counts from: slots run at WaveHour, WaveHour + interval, and
+         so on until midnight. 0 means "from shortly after midnight", 7 means
+         "not before 07:00". Raising it past the current hour postpones the
+         next wave; it does not schedule an extra one. -->
+    <property id="WaveHour" type="number">0</property>
+
+    <!-- Hours between waves (1-24). The wave fires at the first draw at or
+         after each slot, so with the watch asleep it lands on the next wrist
+         raise; a wave cut short by the screen sleeping is replayed on the raise
+         after that. 24 gives the old once-a-day behaviour, at WaveHour. -->
+    <property id="WaveIntervalHours" type="number">3</property>
+
+    <!-- Eclipses -->
+
+    <!-- Master switch for eclipse rendering. Off, the face never tints for an
+         eclipse and DebugEclipse has nothing to act on. -->
+    <property id="EclipseEffects" type="boolean">true</property>
+
+    <!-- Whether an eclipse is drawn everywhere or only where it can be seen.
+         0 Always: draw every eclipse, wherever the watch is.
+         1 If visible here: draw only when the Moon is above the horizon at the
+         current position. With no position fix the eclipse is drawn anyway -
+         a real eclipse is never hidden just because GPS has not reported. -->
+    <property id="EclipseVisibility" type="number">0</property>
+
+    <!-- Where eclipse circumstances come from (source/MoonPhase.mc).
+         0 Table: the bundled catalogue, exact through EclipseData.LAST_LABEL,
+         estimated beyond it.
+         1 Calculate: always compute, including for dates the table covers.
+         Mode 1 exists to check the computed path against the table; mode 0 is
+         the accurate choice for normal use. EclipseDataInfo reports which
+         source produced what you are looking at. -->
+    <property id="EclipseSource" type="number">0</property>
+
+    <!-- Read-only diagnostics, written by the watch face.
+         These appear in the settings screen so the values can be read off the
+         watch, but the face overwrites them: anything typed in is discarded.
+         The Lat/Lon pair is storage only and has no settings entry. -->
+
+    <!-- Last position used for the EclipseVisibility gate, in degrees.
+         Rewritten only after a large enough move or a long enough gap, to keep
+         settings writes off the per-second draw path. -->
+    <property id="LastFixLat" type="float">0.0</property>
+    <property id="LastFixLon" type="float">0.0</property>
+
+    <!-- Human-readable form of the same fix: "lat, lon - timestamp - accuracy",
+         or a note that no fix was available, or that the gate is set to Always
+         and no position was needed. -->
+    <property id="LastFixInfo" type="string">not read yet</property>
+
+    <!-- Which eclipse source produced the current reading, and how far the
+         exact data reaches - e.g. "exact, through 2045". Useful for telling an
+         estimated far-future eclipse from a catalogued one. -->
+    <property id="EclipseDataInfo" type="string">not read yet</property>
+
+    <!-- Testing. These override real time, place and sky, so a face left with
+         any of them set will not show reality. Return them to the defaults
+         below when you are done. -->
+
+    <!-- Fire the rainbow wave at the top of every minute instead of on its
+         schedule, so it can be tuned without waiting. Overrides
+         EnableRainbowWave, WaveHour and WaveIntervalHours while it is on. -->
+    <property id="WaveTestMode" type="boolean">false</property>
+
+    <!-- Force an eclipse regardless of the date: 0 off, 1 lunar, 2 solar.
+         Requires EclipseEffects to be on. Off, real eclipses show normally. -->
+    <property id="DebugEclipse" type="number">0</property>
+
+    <!-- Shift the clock the astronomy runs on, in days; fractions are allowed
+         (0.5 is twelve hours). Moves moon phase, sky position and eclipse
+         lookups only - the hands keep showing the real time, which is what
+         makes it safe to park the face on an eclipse. 0.0 is real time. -->
+    <property id="DebugTimeOffsetDays" type="float">0.0</property>
+
+    <!-- Pretend the watch is somewhere else, in degrees: latitude -90..90,
+         longitude -180..180. Both must be set for either to take effect, and
+         both then replace the GPS fix for the EclipseVisibility gate and any
+         sky positions. 999.0 is the "unset" sentinel (Settings.COORD_UNSET) -
+         restore it on both to go back to the real fix. -->
+    <property id="DebugLatitude" type="float">999.0</property>
+    <property id="DebugLongitude" type="float">999.0</property>
+
+    <!-- Park the displayed time, as HHMMSS: 101035 is the classic 10:10:35 the
+         screenshot tools use, where the hands frame the dial instead of hiding
+         it. -1 is off, and the face shows the real time.
+         This moves nothing but the hands and the comet - the date complication
+         still reads today, and the astronomy still runs on the real clock
+         (shifted by DebugTimeOffsetDays if that is set). -->
+    <property id="DebugClock" type="number">-1</property>
+</properties>

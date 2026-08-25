@@ -1,0 +1,8 @@
+# Layer this on top of monkey.jungle to build with the performance overlay:
+#
+#   monkeyc -f "monkey.jungle;perf.jungle" ...
+#
+# which is what `.\build.ps1 -Perf` and `.\run-simulator.ps1 -Perf` do. The
+# later jungle's assignment wins, so :noperf (the empty stubs) is excluded
+# and the real Perf implementation compiles in. See source/Perf.mc.
+base.excludeAnnotations = noperf

@@ -2,34 +2,76 @@ using Toybox.WatchUi;
 using Toybox.Graphics as Gfx;
 using Toybox.System;
 using Toybox.Math;
+using Toybox.Time;
 using Toybox.Lang;
 
 // Minimal-futurist analog face:
-//   - static layer in monochrome (dial, ticks, hands)
-//   - the only colour is the moving second hand + its comet tail (hue sweep)
-//   - warm procedural moon-phase subdial at 6 o'clock
-//   - day at 3 o'clock, heart rate at 9 o'clock
-// Everything is derived from the screen radius, so one code path serves both
-// the Venu 3 (454x454) and Venu 3S (390x390).
+//   - second track at 0.94R: 48 tick dots and 12 radial numerals on one ring,
+//     with the spectrum comet riding the same ring
+//   - hour marks at 0.78R -- numerals, ticks, or a mix (Settings.hourMarkStyle)
+//   - tapered baton hands, optionally hollow, over a starfield or a zodiac
+//     constellation
+//   - procedural moon-phase subdial at 6 o'clock, which turns copper during a
+//     lunar eclipse and shows a corona during a solar one
+//   - "FRI 27" date at 3 o'clock, heart rate at 9 o'clock
+//   - every few hours, a rainbow wave washes outward across the dial's
+//     numbers, marks and stars (currently off: RainbowWave.ENABLED)
+//
+// This class owns layout and ordering; the drawing lives in Dial, Hands and
+// MoonDial. Everything is derived from the screen radius, so one code path
+// serves both the Venu 3 (454x454) and Venu 3S (390x390).
+
+// A stand-in for System.ClockTime, so Settings.debugClock can park the hands at
+// a fixed time for screenshots -- 101035 being the 10:10:35 of watch
+// photography, where the hands frame the dial instead of covering it. Only the
+// three fields the face reads off a ClockTime are provided; nothing here can
+// construct one with chosen values, hence the substitute.
+class FixedClock {
+    var hour;
+    var min;
+    var sec;
+
+    // The value is read as decimal digits, not as a count of seconds: each
+    // field is its own two digits, so 101035 is 10:10:35 rather than 101,035
+    // seconds. Out-of-range digits (a 75 in the minutes) simply put the hand
+    // past the top of the dial; this is a test property, not an input to guard.
+    function initialize(hhmmss) {
+        hour = (hhmmss / 10000) % 100;
+        min  = (hhmmss / 100) % 100;
+        sec  = hhmmss % 100;
+    }
+}
+
 class MoonPhaseAnalogView extends WatchUi.WatchFace {
 
-    // Fixed lunar near-side maria in normalised disc coords (-1..1) with radius.
-    // The moon is tidally locked, so this pattern never moves; only the
-    // terminator sweeps across it.
-    const CRATERS = [
-        [-0.30, -0.42, 0.26],   // Mare Imbrium
-        [ 0.18, -0.30, 0.20],   // Mare Serenitatis
-        [ 0.34,  0.04, 0.17],   // Mare Tranquillitatis
-        [ 0.55, -0.34, 0.13],   // Mare Crisium
-        [-0.52,  0.10, 0.22],   // Oceanus Procellarum
-        [ 0.02,  0.62, 0.06]    // Tycho (small bright point)
-    ];
+    // -----------------------------------------------------------------------
+    // TUNING: complication size and placement. Radii are fractions of the
+    // screen radius, so they hold on both watch sizes. The dial's own
+    // proportions (ring radii, numeral fonts) live in Dial.mc.
+    // -----------------------------------------------------------------------
+
+    // The side pair sits closer in than the moon: with hour numerals at 0.76R
+    // they have to clear the 3 and the 9, and the date is the widest thing on
+    // the dial.
+    const R_SIDE = 0.38;
+    const R_MOON = 0.46;
+
+    // Date, as "FRI 27". DATE_FONT is the number; DOW_FONT the weekday.
+    const DOW_FONT  = Gfx.FONT_XTINY;
+    const DATE_FONT = Gfx.FONT_MEDIUM;
+
+    // Heart rate. HR_ICON is the glyph half-size in pixels before scaling to
+    // the watch, so it tracks the font if you change one of them.
+    const HR_FONT = Gfx.FONT_MEDIUM;
+    const HR_ICON = 9;
 
     var _w, _h, _cx, _cy, _radius, _scale;
     var _ox, _oy;            // burn-in shift, applied at draw time
     var _lowPower;
     var _burnIn;
-    var _stars;              // precomputed [x,y] star field (Array of [x,y])
+    var _lastStarCount;
+    var _lastBackground;
+    var _redMoonBitmap;
 
     function initialize() {
         WatchFace.initialize();
@@ -48,7 +90,25 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         _scale = _radius / 227.0;      // 227 = Venu 3 radius; scales to 3S
         var settings = System.getDeviceSettings();
         _burnIn = (settings has :requiresBurnInProtection) && settings.requiresBurnInProtection;
-        _buildStars();
+
+        Settings.load();
+        _lastStarCount = Settings.starCount;
+        _lastBackground = Settings.background;
+
+        Dial.setup(dc, _cx, _cy, _radius, _scale);
+        RainbowWave.setup(_cx, _cy, _radius);
+
+        _redMoonBitmap = WatchUi.loadResource(Rez.Drawables.RedMoon);
+    }
+
+    // Settings that change cached geometry need it rebuilt, which cannot happen
+    // in onSettingsChanged because there is no Dc there.
+    (:typecheck(false))
+    function refreshCaches() {
+        if (Settings.starCount != _lastStarCount) {
+            _lastStarCount = Settings.starCount;
+            Dial.buildStars();
+        }
     }
 
     function onEnterSleep() {
@@ -61,8 +121,23 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         WatchUi.requestUpdate();
     }
 
+    (:typecheck(false))
     function onUpdate(dc) {
+        Perf.begin();
+        Settings.load();
+        refreshCaches();
+        Perf.mark();
+
         var clock = System.getClockTime();
+        if (Settings.debugClock >= 0) { clock = new FixedClock(Settings.debugClock); }
+        var now = Time.now().value();
+        var awake = !_lowPower;
+
+        // The starfield fades with moonlight, so the background needs the same
+        // phase the disc draws. Taken once here, off the astro clock, so a debug
+        // time offset moves the sky and the moon together.
+        var frac = MoonPhase.fractionAt(astroTime(now));
+        Perf.mark();
 
         // Burn-in shift: nudge the whole composition on a slow cycle in
         // always-on mode so no pixel is lit continuously.
@@ -75,241 +150,232 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
             _oy = 0;
         }
 
+        if (RainbowWave.ENABLED) {
+            RainbowWave.setup(_cx + _ox, _cy + _oy, _radius);
+            RainbowWave.update(now, clock, awake);
+        }
+        Perf.mark();
+
         dc.setColor(Theme.BG, Theme.BG);
         dc.clear();
         if (dc has :setAntiAlias) { dc.setAntiAlias(true); }
+        Perf.mark();
 
-        var awake = !_lowPower;
+        // Only the origin moves per frame; the cached track, labels and star
+        // field were built once in onLayout.
+        Dial.setOffset(_ox, _oy);
+        Hands.setup(_cx + _ox, _cy + _oy, _scale, clock.sec);
 
         if (awake) {
-            drawStarfield(dc);
-            drawOrbitRing(dc);
+            Dial.drawBackground(dc, clock.sec, frac);
+            if (Settings.showOrbitRing) { Dial.drawOrbitRing(dc); }
         }
-        drawTicks(dc, clock.sec, awake);
-        drawTwelve(dc, awake);
+        Perf.mark();
+        Dial.drawSecondTrack(dc, clock.sec, awake);
+        Perf.mark();
+        Dial.drawHourMarks(dc, awake);
+        Perf.mark();
 
         drawDay(dc, awake);
         drawHeartRate(dc, awake);
-        drawMoon(dc, awake);
+        Perf.mark();
+        drawMoon(dc, awake, now, frac);
+        Perf.mark();
+        //drawRedMoonSprite(dc);
 
         drawHands(dc, clock, awake);
-    }
+        Perf.mark();
 
-    // --- Ornament -----------------------------------------------------------
-
-    function _buildStars() {
-        // A dozen fixed pseudo-random stars, dim, behind the hands.
-        var seeds = [
-            [-0.55, -0.60], [0.40, -0.66], [0.66, -0.30], [-0.70, -0.18],
-            [0.58, 0.28], [-0.44, 0.52], [0.20, -0.44], [-0.24, -0.30],
-            [0.48, -0.10], [-0.62, 0.30], [0.10, 0.40], [0.34, 0.58]
-        ];
-        _stars = [];
-        for (var i = 0; i < seeds.size(); i += 1) {
-            var sx = _cx + seeds[i][0] * _radius;
-            var sy = _cy + seeds[i][1] * _radius;
-            _stars.add([sx, sy]);
-        }
-    }
-
-    (:typecheck(false))
-    function drawStarfield(dc) {
-        dc.setColor(Theme.STAR, Gfx.COLOR_TRANSPARENT);
-        for (var i = 0; i < _stars.size(); i += 1) {
-            dc.fillCircle(_stars[i][0] + _ox, _stars[i][1] + _oy, 1);
-        }
-    }
-
-    function drawOrbitRing(dc) {
-        var r = _radius * 0.60;
-        var n = 72;
-        dc.setColor(Theme.ORBIT_RING, Gfx.COLOR_TRANSPARENT);
-        for (var i = 0; i < n; i += 1) {
-            var a = (i / (n * 1.0)) * 2.0 * Math.PI;
-            var x = _cx + r * Math.sin(a) + _ox;
-            var y = _cy - r * Math.cos(a) + _oy;
-            dc.fillCircle(x, y, 1);
-        }
-    }
-
-    // --- Tick ring + comet tail --------------------------------------------
-
-    function drawTicks(dc, sec, awake) {
-        var rTick = _radius * 0.92;
-        for (var i = 0; i < 60; i += 1) {
-            var a = (i / 60.0) * 2.0 * Math.PI;
-            var x = _cx + rTick * Math.sin(a) + _ox;
-            var y = _cy - rTick * Math.cos(a) + _oy;
-            if (i % 15 == 0) {
-                dc.setColor(Theme.TICK_MAJOR, Gfx.COLOR_TRANSPARENT);
-                dc.fillCircle(x, y, scaled(3));
-            } else {
-                dc.setColor(Theme.TICK_DIM, Gfx.COLOR_TRANSPARENT);
-                dc.fillCircle(x, y, scaled(2));
-            }
-        }
-
-        if (!awake) { return; }
-
-        // Comet tail: the eight dots behind the second hand glow in the
-        // current hue and fade out.
-        var hue = Theme.hueForSecond(sec);
-        var baseColor = Theme.hsvToColor(hue, 1.0, 1.0);
-        var r = (baseColor >> 16) & 0xFF;
-        var g = (baseColor >> 8) & 0xFF;
-        var b = baseColor & 0xFF;
-        for (var k = 0; k < 8; k += 1) {
-            var idx = ((sec - k) % 60 + 60) % 60;
-            var a = (idx / 60.0) * 2.0 * Math.PI;
-            var x = _cx + rTick * Math.sin(a) + _ox;
-            var y = _cy - rTick * Math.cos(a) + _oy;
-            var alpha = 210 - k * 24;
-            if (alpha < 20) { alpha = 20; }
-            var c = Gfx.createColor(alpha, r, g, b);
-            dc.setColor(c, Gfx.COLOR_TRANSPARENT);
-            dc.fillCircle(x, y, scaled(3) - (k > 4 ? 1 : 0));
-        }
-    }
-
-    function drawTwelve(dc, awake) {
-        dc.setColor(awake ? Theme.NUMERAL : Theme.READOUT_DIM, Gfx.COLOR_TRANSPARENT);
-        dc.drawText(_cx + _ox, _cy - _radius * 0.80 + _oy,
-            Gfx.FONT_TINY, "12",
-            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        TrackBench.run(dc);
+        Perf.draw(dc);
     }
 
     // --- Complications ------------------------------------------------------
 
+    // Classic "FRI 27": a small grey weekday followed by the day of the month,
+    // measured so the pair as a whole sits on the complication centre.
+    (:typecheck(false))
     function drawDay(dc, awake) {
-        var day = Complications.dayOfMonth();
-        var x = _cx + _radius * 0.50 + _ox;
-        var y = _cy + _oy;
-        dc.setColor(awake ? Theme.READOUT : Theme.READOUT_DIM, Gfx.COLOR_TRANSPARENT);
-        dc.drawText(x, y, Gfx.FONT_NUMBER_MEDIUM, day.toString(),
-            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        var dow = Complications.dayOfWeekShort();
+        var day = Complications.dayOfMonth().toString();
+
+        var dowFont = DOW_FONT;
+        var dayFont = DATE_FONT;
+        var gap = scaled(4);
+
+        var dowW = dc.getTextWidthInPixels(dow, dowFont);
+        var dayW = dc.getTextWidthInPixels(day, dayFont);
+        var total = dowW + gap + dayW;
+
+        var cx = _cx + _radius * R_SIDE + _ox;
+        var cy = _cy + _oy;
+        var left = cx - total / 2;
+
+        var dowColor = awake ? Theme.DAY_WEEK : Theme.READOUT_DIM;
+        var dayColor = awake ? Theme.READOUT : Theme.READOUT_DIM;
+
+        // Neither half is tinted: like the heart rate opposite it, the date sits
+        // out the rainbow wave, which colours the dial's own marks and numerals.
+        dc.setColor(dowColor, Gfx.COLOR_TRANSPARENT);
+        dc.drawText(left, cy, dowFont, dow,
+            Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
+
+        dc.setColor(dayColor, Gfx.COLOR_TRANSPARENT);
+        dc.drawText(left + dowW + gap, cy, dayFont, day,
+            Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
     }
 
+    // Glyph beside the number rather than above it, so the pair sits on one
+    // line at the same height as the "FRI 27" date on the other side.
+    (:typecheck(false))
     function drawHeartRate(dc, awake) {
         var hr = Complications.heartRate();
-        var cx = _cx - _radius * 0.50 + _ox;
+        var cx = _cx - _radius * R_SIDE + _ox;
         var cy = _cy + _oy;
 
-        // Small heart glyph above the number.
-        var hs = scaled(5);
-        var hy = cy - scaled(16);
-        dc.setColor(awake ? Theme.HR_HEART : Theme.READOUT_DIM, Gfx.COLOR_TRANSPARENT);
-        dc.fillCircle(cx - hs * 0.5, hy, hs * 0.6);
-        dc.fillCircle(cx + hs * 0.5, hy, hs * 0.6);
-        dc.fillPolygon([
-            [cx - hs, hy + hs * 0.2],
-            [cx + hs, hy + hs * 0.2],
-            [cx, hy + hs * 1.3]
-        ]);
-
         var text = (hr == null) ? "--" : hr.toString();
+        var font = HR_FONT;
+        var textW = dc.getTextWidthInPixels(text, font);
+
+        var hs = scaled(HR_ICON);
+        var gap = scaled(4);
+        var iconW = hs * 1.92;
+        var total = iconW + gap + textW;
+
+        var left = cx - total / 2;
+        var hx = left + iconW / 2;
+        var tx = left + iconW + gap;
+
+        drawHeart(dc, hx, cy, hs, awake);
+
+        // Not tinted, glyph and number both: like the date opposite it, the
+        // heart rate sits out the rainbow wave.
         dc.setColor(awake ? Theme.READOUT : Theme.READOUT_DIM, Gfx.COLOR_TRANSPARENT);
-        dc.drawText(cx, cy + scaled(6), Gfx.FONT_TINY, text,
-            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(tx, cy, font, text,
+            Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);
     }
 
-    // --- Moon subdial -------------------------------------------------------
+    // Two lobes and a point, with a cusp notch between the lobes so it reads as
+    // a heart rather than a blob at this size. See drawHeartRate: the rainbow
+    // wave passes the whole heart-rate readout by.
+    (:typecheck(false))
+    function drawHeart(dc, cx, cy, hs, awake) {
+        var color = awake ? Theme.HR_HEART : Theme.READOUT_DIM;
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
 
-    function drawMoon(dc, awake) {
+        var lobe = hs * 0.52;
+        dc.fillCircle(cx - hs * 0.45, cy - hs * 0.12, lobe);
+        dc.fillCircle(cx + hs * 0.45, cy - hs * 0.12, lobe);
+        dc.fillPolygon([
+            [cx - hs * 0.96, cy + hs * 0.02],
+            [cx - hs * 0.20, cy + hs * 0.58],
+            [cx,             cy + hs * 1.05],
+            [cx + hs * 0.20, cy + hs * 0.58],
+            [cx + hs * 0.96, cy + hs * 0.02]
+        ]);
+        // Cusp: bite the notch back out of the top centre.
+        dc.setColor(Theme.BG, Gfx.COLOR_TRANSPARENT);
+        dc.fillPolygon([
+            [cx - hs * 0.18, cy - hs * 0.50],
+            [cx + hs * 0.18, cy - hs * 0.50],
+            [cx,             cy - hs * 0.10]
+        ]);
+    }
+
+    // --- Moon ---------------------------------------------------------------
+
+    (:typecheck(false))
+    function drawMoon(dc, awake, now, frac) {
         var mx = _cx + _ox;
-        var my = _cy + _radius * 0.46 + _oy;
+        var my = _cy + _radius * R_MOON + _oy;
         var mr = _radius * 0.15;
-        var frac = MoonPhase.fraction();
 
-        // Unlit disc + outline.
-        dc.setColor(Theme.MOON_DARK, Gfx.COLOR_TRANSPARENT);
-        dc.fillCircle(mx, my, mr);
-        dc.setColor(Theme.MOON_OUTLINE, Gfx.COLOR_TRANSPARENT);
-        dc.setPenWidth(1);
-        dc.drawCircle(mx, my, mr);
-
-        var cosP = Math.cos(2.0 * Math.PI * frac);
-        var litColor = awake ? Theme.MOON_LIT : Theme.MOON_LOW;
-        var mareColor = awake ? Theme.MOON_MARE : Theme.MOON_DARK;
-        var waxing = (frac <= 0.5);
-
-        var r2 = mr * mr;
-        var step = 1;
-        for (var dy = -mr; dy <= mr; dy += step) {
-            var w = Math.sqrt(r2 - dy * dy);
-            if (w <= 0) { continue; }
-            var xt = w * cosP;
-
-            var lx0; var lx1;
-            if (waxing) {
-                lx0 = xt; lx1 = w;      // lit from terminator to right limb
-            } else {
-                lx0 = -w; lx1 = -xt;    // lit from left limb to terminator
-            }
-            if (lx1 <= lx0) { continue; }
-
-            var y = my + dy;
-            dc.setColor(litColor, Gfx.COLOR_TRANSPARENT);
-            dc.drawLine(mx + lx0, y, mx + lx1, y);
-
-            if (awake) {
-                drawCraterSpans(dc, mx, my, mr, dy, lx0, lx1, mareColor);
-            }
+        var eclipse = currentEclipse(now);
+        var weak = false;
+        if (eclipse != null && !eclipse[:lunar]) {
+            // A solar eclipse is only visible along a narrow path the face
+            // cannot know about, so the corona is drawn faint unless the
+            // location check actually ran and passed. "Always" never checks,
+            // and a watch with no fix fails open: both are unconfirmed.
+            // A forced eclipse is a rendering test, so never dim that one.
+            weak = (Settings.debugEclipse == Settings.DEBUG_ECLIPSE_OFF)
+                && !SkyPosition.visibilityConfirmed();
         }
 
-        // Limb highlight on the lit outer edge.
-        if (awake) {
-            dc.setColor(Theme.MOON_LIMB, Gfx.COLOR_TRANSPARENT);
-            dc.setPenWidth(2);
-            if (waxing) {
-                dc.drawArc(mx, my, mr - 1, Gfx.ARC_CLOCKWISE, 90, -90);
-            } else {
-                dc.drawArc(mx, my, mr - 1, Gfx.ARC_COUNTER_CLOCKWISE, 90, 270);
-            }
-            dc.setPenWidth(1);
-        }
+        // frac is passed in rather than taken here: it has to come off the same
+        // clock the eclipse did, or a debug time offset moves the eclipse while
+        // the disc keeps today's phase. The starfield shares it too.
+        MoonDial.draw(dc, mx, my, mr, awake, frac, eclipse, weak);
     }
 
-    // Overdraw the maria where they fall inside the lit span on this scanline.
-    function drawCraterSpans(dc, mx, my, mr, dy, lx0, lx1, mareColor) {
-        dc.setColor(mareColor, Gfx.COLOR_TRANSPARENT);
-        for (var i = 0; i < CRATERS.size(); i += 1) {
-            var ccx = CRATERS[i][0] * mr;
-            var ccy = CRATERS[i][1] * mr;
-            var ccr = CRATERS[i][2] * mr;
-            var d = ccr * ccr - (dy - ccy) * (dy - ccy);
-            if (d <= 0) { continue; }
-            var half = Math.sqrt(d);
-            var cx0 = ccx - half;
-            var cx1 = ccx + half;
-            // intersect [cx0,cx1] with lit [lx0,lx1]
-            var a = (cx0 > lx0) ? cx0 : lx0;
-            var b = (cx1 < lx1) ? cx1 : lx1;
-            if (b > a) {
-                var y = my + dy;
-                dc.drawLine(mx + a, y, mx + b, y);
-            }
+    // The eclipse to render right now, or null. Cached inside MoonPhase, so
+    // this is cheap to call every second.
+    (:typecheck(false))
+    function currentEclipse(now) {
+        if (!Settings.eclipseEffects) { return null; }
+
+        if (Settings.debugEclipse == Settings.DEBUG_ECLIPSE_LUNAR) {
+            return { :type => EclipseData.TOTAL_LUNAR, :lunar => true,
+                     :magnitude => 1.2, :offset => 0.0, :exact => false };
         }
+        if (Settings.debugEclipse == Settings.DEBUG_ECLIPSE_SOLAR) {
+            return { :type => EclipseData.TOTAL_SOLAR, :lunar => false,
+                     :magnitude => 1.0, :offset => 0.0, :exact => false };
+        }
+
+        var e = MoonPhase.eclipseAt(astroTime(now));
+        if (e == null) { return null; }
+
+        // A penumbral lunar eclipse looks like nothing in the sky, so it is
+        // detected and reported but never turns the moon red.
+        if (e[:type] == EclipseData.PENUMBRAL) { return null; }
+
+        if (!SkyPosition.eclipseVisible(e, now)) { return null; }
+        return e;
+    }
+
+    // The clock the astronomy runs on. DebugTimeOffsetDays shifts only this, so
+    // the face can be parked on an eclipse while still showing the real time.
+    (:typecheck(false))
+    function astroTime(now) {
+        if (Settings.debugTimeOffsetDays == 0.0) { return now; }
+        return now + Settings.debugTimeOffsetDays * 86400.0;
+    }
+
+    // Scratch: the red moon sprite, centred on the face at a fraction of the
+    // screen radius so it reads as an accent rather than covering the dial.
+    // drawScaledBitmap rather than drawBitmap2+transform: the resource
+    // compiler palettises the PNG, and drawBitmap2 refuses a palettised
+    // source once a :transform is supplied (see Dial.renderLabel).
+    const RED_MOON_SPRITE_SCALE = 0.35; // sprite diameter as a fraction of _radius
+
+    (:typecheck(false))
+    function drawRedMoonSprite(dc) {
+        if (_redMoonBitmap == null) { return; }
+
+        var size = (_radius * RED_MOON_SPRITE_SCALE).toNumber();
+        var x = (_cx + _ox - size / 2.0).toNumber();
+        var y = (_cy + _oy - size / 2.0).toNumber() + _h / 4.4;
+
+        dc.drawScaledBitmap(x, y, size, size, _redMoonBitmap);
     }
 
     // --- Hands --------------------------------------------------------------
 
+    (:typecheck(false))
     function drawHands(dc, clock, awake) {
         var hour = clock.hour % 12;
         var min = clock.min;
         var sec = clock.sec;
 
-        var hourAngle = ((hour + min / 60.0) / 12.0) * 2.0 * Math.PI;
-        var minAngle  = ((min + sec / 60.0) / 60.0) * 2.0 * Math.PI;
+        // Stepped hands: the minute hand ticks once a minute, the hour hand
+        // every 10 minutes, so neither creeps between positions.
+        var hourMin = (min / 10) * 10;
+        var hourAngle = ((hour + hourMin / 60.0) / 12.0) * 2.0 * Math.PI;
+        var minAngle  = (min / 60.0) * 2.0 * Math.PI;
 
-        // Hour hand: short and wide.
-        drawHand(dc, hourAngle, _radius * 0.52, scaled(9), scaled(18),
-            awake ? Theme.HAND_FILL : null,
-            awake ? Theme.HAND_OUTLINE : Theme.HAND_DIM);
-
-        // Minute hand: long and narrow.
-        drawHand(dc, minAngle, _radius * 0.82, scaled(6), scaled(20),
-            awake ? Theme.HAND_FILL : null,
-            awake ? Theme.HAND_OUTLINE : Theme.HAND_DIM);
+        Hands.draw(dc, hourAngle, _radius * 0.48, scaled(11), scaled(6), scaled(16), awake);
+        Hands.draw(dc, minAngle, _radius * 0.84, scaled(8), scaled(4), scaled(18), awake);
 
         // Second hand: hairline needle in the current hue (awake only).
         if (awake) {
@@ -333,45 +399,6 @@ class MoonPhaseAnalogView extends WatchUi.WatchFace {
         dc.fillCircle(_cx + _ox, _cy + _oy, scaled(4));
         dc.setColor(Theme.BG, Gfx.COLOR_TRANSPARENT);
         dc.fillCircle(_cx + _ox, _cy + _oy, scaled(2));
-    }
-
-    // Draw a hollow geometric blade hand. spineColor null => outline only.
-    function drawHand(dc, angle, length, halfWidth, tail, spineColor, outlineColor) {
-        var ca = Math.cos(angle);
-        var sa = Math.sin(angle);
-
-        var outer = handPoints(ca, sa, length, halfWidth, tail);
-        dc.setColor(outlineColor, Gfx.COLOR_TRANSPARENT);
-        dc.fillPolygon(outer);
-
-        // Hollow it out with the background colour.
-        var inner = handPoints(ca, sa, length - scaled(4), halfWidth * 0.5, tail * 0.5);
-        dc.setColor(Theme.BG, Gfx.COLOR_TRANSPARENT);
-        dc.fillPolygon(inner);
-
-        if (spineColor != null) {
-            var spine = handPoints(ca, sa, length - scaled(3), halfWidth * 0.20, tail * 0.4);
-            dc.setColor(spineColor, Gfx.COLOR_TRANSPARENT);
-            dc.fillPolygon(spine);
-        }
-    }
-
-    function handPoints(ca, sa, length, halfWidth, tail) {
-        return [
-            rot(0, -length, ca, sa),
-            rot(halfWidth, -length * 0.5, ca, sa),
-            rot(halfWidth * 0.6, tail, ca, sa),
-            rot(-halfWidth * 0.6, tail, ca, sa),
-            rot(-halfWidth, -length * 0.5, ca, sa)
-        ];
-    }
-
-    // Rotate local (lx,ly) [tip toward -y] by hand angle, translate to centre
-    // (with burn-in shift). See plan for the derivation.
-    function rot(lx, ly, ca, sa) {
-        var x = _cx + lx * ca - ly * sa + _ox;
-        var y = _cy + lx * sa + ly * ca + _oy;
-        return [x, y];
     }
 
     function scaled(v) {

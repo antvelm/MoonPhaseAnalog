@@ -1,3 +1,115 @@
 <strings>
     <string id="AppName">Moon Phase Astro</string>
+
+    <!-- Appearance -->
+    <string id="SetCometMode">Comet trail</string>
+    <string id="SetCometModePrompt">How the trail behind the second hand is coloured.</string>
+    <string id="CometClassic">Classic (one hue)</string>
+    <string id="CometSpectrumTrail">Spectrum trail</string>
+    <string id="CometSpectrumRing">Spectrum ring</string>
+
+    <string id="SetCometFive">Comet crosses the numerals</string>
+    <string id="SetCometFivePrompt">Off, the trail skips the five-second marks so it breaks around the numbers. On, it draws a dot there too and runs unbroken.</string>
+
+    <string id="SetOrbitRing">Show orbit ring</string>
+    <string id="SetOrbitRingPrompt">The faint dotted circle inside the hour numerals.</string>
+
+    <string id="SetBackground">Background</string>
+    <string id="SetBackgroundPrompt">Random starfield, or the star pattern of a zodiac constellation.</string>
+    <string id="BgStarfield">Starfield</string>
+    <string id="BgZodiacStars">Zodiac stars</string>
+    <string id="BgZodiacLines">Zodiac stars + lines</string>
+
+    <string id="SetZodiacSign">Zodiac sign</string>
+    <string id="SetZodiacSignPrompt">Auto follows the current sun sign. Only used when the background is set to a zodiac constellation.</string>
+    <string id="ZodiacAuto">Auto (current sun sign)</string>
+    <string id="ZodiacAries">Aries</string>
+    <string id="ZodiacTaurus">Taurus</string>
+    <string id="ZodiacGemini">Gemini</string>
+    <string id="ZodiacCancer">Cancer</string>
+    <string id="ZodiacLeo">Leo</string>
+    <string id="ZodiacVirgo">Virgo</string>
+    <string id="ZodiacLibra">Libra</string>
+    <string id="ZodiacScorpius">Scorpius</string>
+    <string id="ZodiacSagittarius">Sagittarius</string>
+    <string id="ZodiacCapricornus">Capricornus</string>
+    <string id="ZodiacAquarius">Aquarius</string>
+    <string id="ZodiacPisces">Pisces</string>
+
+    <string id="SetHandColor">Hand colour</string>
+    <string id="SetHandColorPrompt">Colour of the hour and minute hands. Spectrum gives them no fixed colour: they ride the same hue as the second hand, turning through the wheel once a minute. The second hand itself is always the spectrum needle.</string>
+    <string id="HandWhite">White</string>
+    <string id="HandCool">Cool white</string>
+    <string id="HandLume">Lume green</string>
+    <string id="HandIce">Ice blue</string>
+    <string id="HandAmber">Amber</string>
+    <string id="HandOrange">Orange</string>
+    <string id="HandRed">Red</string>
+    <string id="HandMagenta">Magenta</string>
+    <string id="HandSpectrum">Spectrum</string>
+
+    <string id="SetHandHollow">Hollow hands</string>
+    <string id="SetHandHollowPrompt">Cuts a hollow down the middle of the hour and minute hands, given as a percentage of the hand's width at the tip: 0 is solid, 50 leaves a clear border, 80 a hairline outline. The border keeps an even thickness, so the cut-out widens towards the centre. Too thin to show and the hand stays solid.</string>
+
+    <string id="SetStarCount">Stars</string>
+    <string id="SetStarCountPrompt">How many stars in the sky, 0-200, 0 for none. They gather along an arc across the dial like the Milky Way. Moonlight washes them out: the faintest show only near a new moon and fade as the moon fills, until a full moon leaves just the brightest.</string>
+
+    <string id="SetShowHours">Show hour numerals</string>
+    <string id="SetHourNumeralsOuter">Hour numerals on outer ring</string>
+    <string id="SetHourNumeralsOuterPrompt">Moves the hour numerals out to the second track, bigger and upright, in place of the 5-second numerals there.</string>
+
+    <string id="SetHourMarkStyle">Hour mark style</string>
+    <string id="SetHourMarkStylePrompt">What the hour positions show: numerals, numerals at 12/3/6/9 with bold ticks elsewhere, or bold ticks only at 12/3/6/9 with thin ticks elsewhere.</string>
+    <string id="HourMarkNumerals">Numerals</string>
+    <string id="HourMarkLines">Numerals + lines</string>
+    <string id="HourMarkLinesCardinal">Lines (12/3/6/9 bold)</string>
+
+    <string id="SetShowSeconds">Show second numerals</string>
+
+    <!-- Rainbow wave -->
+    <string id="SetWave">Rainbow wave</string>
+    <string id="SetWavePrompt">Every few hours a band of spectrum washes outward across the face, colouring the numbers, marks and stars as it passes. It runs for about 8 seconds, and fires on the first wrist raise after each slot.</string>
+    <string id="SetWaveHour">Rainbow wave start hour</string>
+    <string id="SetWaveHourPrompt">The earliest hour the wave may fire, and the hour the interval counts from.</string>
+    <string id="SetWaveInterval">Hours between waves</string>
+    <string id="SetWaveIntervalPrompt">How often the wave repeats through the day. 24 runs it once a day, at the start hour.</string>
+
+    <!-- Eclipses -->
+    <string id="SetEclipse">Eclipse effects</string>
+    <string id="SetEclipsePrompt">Turn the moon copper during a lunar eclipse and show a corona during a solar one. Exact eclipse data is built in through 2045; after that the dates are calculated on the watch.</string>
+
+    <string id="SetEclipseVis">Show eclipses</string>
+    <string id="SetEclipseVisPrompt">"Only when visible here" uses the last known GPS position to check the eclipsed body is above your horizon. It never needs a GPS fix, and falls back to showing every eclipse when no position is available. For solar eclipses this only confirms the sun is up, not that you are on the path of totality.</string>
+    <string id="EclipseAlways">Always</string>
+    <string id="EclipseIfHere">Only when visible here</string>
+
+    <string id="SetEclipseSource">Eclipse data</string>
+    <string id="SetEclipseSourcePrompt">Built-in data covers 2025 to 2045 exactly. "Always calculate" uses the on-watch astronomy for every date instead, which is also how dates past 2045 are handled.</string>
+    <string id="EclipseSrcTable">Built in through 2045</string>
+    <string id="EclipseSrcCompute">Always calculate</string>
+
+    <!-- Diagnostics -->
+    <string id="ReadOnlyPrompt">Reported by the watch. Anything typed here is overwritten.</string>
+    <string id="SetEclipseInfo">Eclipse data status</string>
+    <string id="SetLastFix">Last position used</string>
+
+    <!-- Testing -->
+    <string id="SetWaveTest">Rainbow wave test mode</string>
+    <string id="SetWaveTestPrompt">Fire the wave at the top of every minute instead of on its schedule.</string>
+
+    <string id="SetDebugEclipse">Force eclipse</string>
+    <string id="SetDebugEclipsePrompt">Render an eclipse regardless of the date, for checking how it looks.</string>
+    <string id="DebugEclipseOff">Off</string>
+    <string id="DebugEclipseLunar">Force lunar</string>
+    <string id="DebugEclipseSolar">Force solar</string>
+
+    <string id="SetTimeOffset">Astronomy time offset (days)</string>
+    <string id="SetTimeOffsetPrompt">Shifts only the moon and eclipse calculations, so the face keeps showing the real time. Leave at 0 for normal use.</string>
+
+    <string id="SetDebugClock">Fixed time (HHMMSS)</string>
+    <string id="SetDebugClockPrompt">Parks the hands at a set time, written as HHMMSS - 101035 is the classic 10:10:35 used for photographs. The date and the astronomy are unaffected. -1 shows the real time.</string>
+
+    <string id="SetDebugLat">Test latitude</string>
+    <string id="SetDebugLon">Test longitude</string>
+    <string id="SetDebugCoordPrompt">Overrides the GPS position for the eclipse visibility check. 999 means unset.</string>
 </strings>

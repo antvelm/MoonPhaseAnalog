@@ -1,1 +1,9 @@
 project.manifest = manifest.xml
+
+# The performance overlay in source/Perf.mc is off by default: :perf is the
+# real implementation, :noperf the set of empty stubs, and exactly one of the
+# two has to be excluded or every function in that module is declared twice.
+# Excluding it here rather than on each compiler command line means every
+# build path (package.ps1, tools/gen-*.ps1, a bare monkeyc) gets a working
+# default. perf.jungle overrides this to turn the overlay on.
+base.excludeAnnotations = perf

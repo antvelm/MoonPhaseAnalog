@@ -1,0 +1,187 @@
+<settings>
+
+    <!-- ===== Appearance ===== -->
+
+    <setting propertyKey="@Properties.CometMode" title="@Strings.SetCometMode"
+             prompt="@Strings.SetCometModePrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.CometClassic</listEntry>
+            <listEntry value="1">@Strings.CometSpectrumTrail</listEntry>
+            <listEntry value="2">@Strings.CometSpectrumRing</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.CometOnFiveSec" title="@Strings.SetCometFive"
+             prompt="@Strings.SetCometFivePrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.ShowOrbitRing" title="@Strings.SetOrbitRing"
+             prompt="@Strings.SetOrbitRingPrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.HandColor" title="@Strings.SetHandColor"
+             prompt="@Strings.SetHandColorPrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.HandWhite</listEntry>
+            <listEntry value="1">@Strings.HandCool</listEntry>
+            <listEntry value="2">@Strings.HandLume</listEntry>
+            <listEntry value="3">@Strings.HandIce</listEntry>
+            <listEntry value="4">@Strings.HandAmber</listEntry>
+            <listEntry value="5">@Strings.HandOrange</listEntry>
+            <listEntry value="6">@Strings.HandRed</listEntry>
+            <listEntry value="7">@Strings.HandMagenta</listEntry>
+            <listEntry value="8">@Strings.HandSpectrum</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.HandHollow" title="@Strings.SetHandHollow"
+             prompt="@Strings.SetHandHollowPrompt">
+        <settingConfig type="numeric" min="0" max="80" />
+    </setting>
+
+    <setting propertyKey="@Properties.Background" title="@Strings.SetBackground"
+             prompt="@Strings.SetBackgroundPrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.BgStarfield</listEntry>
+            <listEntry value="1">@Strings.BgZodiacStars</listEntry>
+            <listEntry value="2">@Strings.BgZodiacLines</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.ZodiacSign" title="@Strings.SetZodiacSign"
+             prompt="@Strings.SetZodiacSignPrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.ZodiacAuto</listEntry>
+            <listEntry value="1">@Strings.ZodiacAries</listEntry>
+            <listEntry value="2">@Strings.ZodiacTaurus</listEntry>
+            <listEntry value="3">@Strings.ZodiacGemini</listEntry>
+            <listEntry value="4">@Strings.ZodiacCancer</listEntry>
+            <listEntry value="5">@Strings.ZodiacLeo</listEntry>
+            <listEntry value="6">@Strings.ZodiacVirgo</listEntry>
+            <listEntry value="7">@Strings.ZodiacLibra</listEntry>
+            <listEntry value="8">@Strings.ZodiacScorpius</listEntry>
+            <listEntry value="9">@Strings.ZodiacSagittarius</listEntry>
+            <listEntry value="10">@Strings.ZodiacCapricornus</listEntry>
+            <listEntry value="11">@Strings.ZodiacAquarius</listEntry>
+            <listEntry value="12">@Strings.ZodiacPisces</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.StarCount" title="@Strings.SetStarCount"
+             prompt="@Strings.SetStarCountPrompt">
+        <settingConfig type="numeric" min="0" max="200" />
+    </setting>
+
+    <setting propertyKey="@Properties.ShowHourNumerals" title="@Strings.SetShowHours">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.HourNumeralsOuter" title="@Strings.SetHourNumeralsOuter"
+             prompt="@Strings.SetHourNumeralsOuterPrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.HourMarkStyle" title="@Strings.SetHourMarkStyle"
+             prompt="@Strings.SetHourMarkStylePrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.HourMarkNumerals</listEntry>
+            <listEntry value="1">@Strings.HourMarkLines</listEntry>
+            <listEntry value="2">@Strings.HourMarkLinesCardinal</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.ShowSecondNumerals" title="@Strings.SetShowSeconds">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <!-- ===== Rainbow wave ===== -->
+
+    <setting propertyKey="@Properties.EnableRainbowWave" title="@Strings.SetWave"
+             prompt="@Strings.SetWavePrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.WaveHour" title="@Strings.SetWaveHour"
+             prompt="@Strings.SetWaveHourPrompt">
+        <settingConfig type="numeric" min="0" max="23" />
+    </setting>
+
+    <setting propertyKey="@Properties.WaveIntervalHours" title="@Strings.SetWaveInterval"
+             prompt="@Strings.SetWaveIntervalPrompt">
+        <settingConfig type="numeric" min="1" max="24" />
+    </setting>
+
+    <!-- ===== Eclipses ===== -->
+
+    <setting propertyKey="@Properties.EclipseEffects" title="@Strings.SetEclipse"
+             prompt="@Strings.SetEclipsePrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.EclipseVisibility" title="@Strings.SetEclipseVis"
+             prompt="@Strings.SetEclipseVisPrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.EclipseAlways</listEntry>
+            <listEntry value="1">@Strings.EclipseIfHere</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.EclipseSource" title="@Strings.SetEclipseSource"
+             prompt="@Strings.SetEclipseSourcePrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.EclipseSrcTable</listEntry>
+            <listEntry value="1">@Strings.EclipseSrcCompute</listEntry>
+        </settingConfig>
+    </setting>
+
+    <!-- ===== Diagnostics: written by the watch face, edits are overwritten ===== -->
+
+    <setting propertyKey="@Properties.EclipseDataInfo" title="@Strings.SetEclipseInfo"
+             prompt="@Strings.ReadOnlyPrompt">
+        <settingConfig type="alphaNumeric" maxLength="64" required="false" />
+    </setting>
+
+    <setting propertyKey="@Properties.LastFixInfo" title="@Strings.SetLastFix"
+             prompt="@Strings.ReadOnlyPrompt">
+        <settingConfig type="alphaNumeric" maxLength="64" required="false" />
+    </setting>
+
+    <!-- ===== Testing ===== -->
+
+    <setting propertyKey="@Properties.WaveTestMode" title="@Strings.SetWaveTest"
+             prompt="@Strings.SetWaveTestPrompt">
+        <settingConfig type="boolean" />
+    </setting>
+
+    <setting propertyKey="@Properties.DebugEclipse" title="@Strings.SetDebugEclipse"
+             prompt="@Strings.SetDebugEclipsePrompt">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.DebugEclipseOff</listEntry>
+            <listEntry value="1">@Strings.DebugEclipseLunar</listEntry>
+            <listEntry value="2">@Strings.DebugEclipseSolar</listEntry>
+        </settingConfig>
+    </setting>
+
+    <setting propertyKey="@Properties.DebugTimeOffsetDays" title="@Strings.SetTimeOffset"
+             prompt="@Strings.SetTimeOffsetPrompt">
+        <settingConfig type="numeric" min="-40000" max="40000" />
+    </setting>
+
+    <setting propertyKey="@Properties.DebugClock" title="@Strings.SetDebugClock"
+             prompt="@Strings.SetDebugClockPrompt">
+        <settingConfig type="numeric" min="-1" max="235959" />
+    </setting>
+
+    <setting propertyKey="@Properties.DebugLatitude" title="@Strings.SetDebugLat"
+             prompt="@Strings.SetDebugCoordPrompt">
+        <settingConfig type="numeric" min="-999" max="999" />
+    </setting>
+
+    <setting propertyKey="@Properties.DebugLongitude" title="@Strings.SetDebugLon"
+             prompt="@Strings.SetDebugCoordPrompt">
+        <settingConfig type="numeric" min="-999" max="999" />
+    </setting>
+
+</settings>
